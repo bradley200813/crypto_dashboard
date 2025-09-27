@@ -171,14 +171,18 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Lax'
 
-# For production with HTTPS (uncomment when deploying with SSL)
+# For production with HTTPS - Railway handles SSL termination
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    # Don't force SSL redirect on Railway (they handle it at proxy level)
+    SECURE_SSL_REDIRECT = False  # Changed from True to False
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+    
+    # Railway-specific: Trust proxy headers for HTTPS detection
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Logging Configuration
 import logging
