@@ -1,2 +1,1 @@
-release: python manage.py migrate
-web: gunicorn dashboard.wsgi:application
+web: bash start.sh
