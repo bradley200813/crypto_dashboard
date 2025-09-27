@@ -6,6 +6,7 @@ Make sure to set environment variables for sensitive data.
 """
 
 import os
+import dj_database_url
 from .settings import *
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -15,34 +16,28 @@ DEBUG = False
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
+    '.onrender.com',  # Allow all Render subdomains
     # Add your production domain here
     # 'your-domain.com',
     # 'www.your-domain.com',
 ]
 
+# Parse ALLOWED_HOSTS from environment variable if provided
+if 'ALLOWED_HOSTS' in os.environ:
+    ALLOWED_HOSTS = os.environ['ALLOWED_HOSTS'].split(',')
+
 # SECURITY WARNING: Use environment variable for secret key in production
 SECRET_KEY = os.environ.get('SECRET_KEY', SECRET_KEY)
 
 # Database Configuration
-# For production, consider using PostgreSQL instead of SQLite
+# Use PostgreSQL for production on Render
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f"postgresql://cryptouser:password@localhost:5432/cryptodashboard",
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
-
-# For PostgreSQL (uncomment and configure):
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.environ.get('DB_NAME', 'cryptotracker'),
-#         'USER': os.environ.get('DB_USER', 'postgres'),
-#         'PASSWORD': os.environ.get('DB_PASSWORD'),
-#         'HOST': os.environ.get('DB_HOST', 'localhost'),
-#         'PORT': os.environ.get('DB_PORT', '5432'),
-#     }
-# }
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
