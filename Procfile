@@ -1,2 +1,2 @@
-web: gunicorn dashboard.wsgi:application
 release: python manage.py migrate
+web: gunicorn dashboard.wsgi:application
