@@ -1,0 +1,78 @@
+{% extends 'market/base.html' %}
+
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<div class="p-8">
+  <div class="max-w-2xl mx-auto">
+    <div class="bg-crypto-gray rounded-xl p-8">
+      <div class="flex items-center space-x-4 mb-6">
+        <div class="w-16 h-16 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-full flex items-center justify-center">
+          <i class="fa-solid fa-user text-white text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold">{{ user.username }}</h1>
+          <p class="text-crypto-muted">Member since {{ user.date_joined|date:"F Y" }}</p>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-crypto-darker rounded-lg p-6">
+          <h3 class="text-lg font-semibold mb-2">Account Information</h3>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between">
+              <span class="text-crypto-muted">Username:</span>
+              <span>{{ user.username }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-crypto-muted">Email:</span>
+              <span>{{ user.email|default:"Not set" }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-crypto-muted">Joined:</span>
+              <span>{{ user.date_joined|date:"M d, Y" }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-crypto-darker rounded-lg p-6">
+          <h3 class="text-lg font-semibold mb-2">Portfolio Stats</h3>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between">
+              <span class="text-crypto-muted">Holdings:</span>
+              <span>{{ portfolio_count|default:"0" }} coins</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-crypto-muted">Watchlist:</span>
+              <span>{{ watchlist_count|default:"0" }} coins</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-crypto-muted">Transactions:</span>
+              <span>{{ transaction_count|default:"0" }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-6 pt-6 border-t border-crypto-muted/20">
+        <div class="flex space-x-4">
+          <a 
+            href="{% url 'users:logout' %}" 
+            class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+          >
+            <i class="fa-solid fa-sign-out-alt mr-2"></i>
+            Logout
+          </a>
+          <a 
+            href="{% url 'market:portfolio' %}" 
+            class="px-4 py-2 bg-crypto-teal hover:bg-crypto-teal/80 text-white rounded-lg transition-colors"
+          >
+            <i class="fa-solid fa-chart-pie mr-2"></i>
+            View Portfolio
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

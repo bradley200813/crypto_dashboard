@@ -1,0 +1,349 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>My Watchlist — CryptoTracker Dashboard</title>
+  
+  <!-- CSRF Token for AJAX requests -->
+  <meta name="csrf-token" content="{{ csrf_token }}">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome (icons) -->
+  <script>
+    window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --crypto-dark: #0f1419;
+      --crypto-darker: #0a0e13;
+      --crypto-gray: #1a1f26;
+      --crypto-teal: #14b8a6;
+      --crypto-orange: #f97316;
+      --crypto-text: #e2e8f0;
+      --crypto-muted: #64748b;
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:var(--crypto-dark);
+      color:var(--crypto-text);
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    ::-webkit-scrollbar{ display:none; }
+    {% csrf_token %}
+    
+    <!-- Navigation Bar -->
+    <nav class="bg-gray-800 p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-blue-400">
+                <a href="{% url 'market:dashboard' %}" class="hover:text-blue-300">Crypto Dashboard</a>
+            </h1>
+            <div class="flex space-x-4">
+                <a href="{% url 'market:dashboard' %}" class="text-gray-300 hover:text-white transition-colors">
+                    <i class="fas fa-home mr-2"></i>Dashboard
+                </a>
+                <span class="text-blue-400 font-medium">
+                    <i class="fas fa-star mr-2"></i>My Watchlist
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-6">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-white mb-2">
+                    <i class="fas fa-star text-yellow-400 mr-3"></i>My Watchlist
+                </h1>
+                <p class="text-gray-400">Track your favorite cryptocurrencies</p>
+            </div>
+            <div class="text-right">
+                <p class="text-sm text-gray-400">Total watched coins</p>
+                <p class="text-2xl font-bold text-blue-400" id="watchlistCount">{{ watchlist_coins|length }}</p>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        {% if not watchlist_coins %}
+        <div class="text-center py-16">
+            <div class="mb-6">
+                <i class="fas fa-star text-6xl text-gray-600"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-400 mb-4">Your watchlist is empty</h2>
+            <p class="text-gray-500 mb-6">Start adding cryptocurrencies to track their performance</p>
+            <a href="{% url 'market:dashboard' %}" 
+               class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+                <i class="fas fa-plus mr-2"></i>
+                Browse Cryptocurrencies
+            </a>
+        </div>
+        {% else %}
+        
+        <!-- Watchlist Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-400">Total Value</p>
+                        <p class="text-2xl font-bold text-green-400">${{ total_value|floatformat:2 }}</p>
+                    </div>
+                    <div class="text-green-400">
+                        <i class="fas fa-wallet text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-400">24h Gainers</p>
+                        <p class="text-2xl font-bold text-green-400">{{ gainers_count }}</p>
+                    </div>
+                    <div class="text-green-400">
+                        <i class="fas fa-arrow-up text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-400">24h Losers</p>
+                        <p class="text-2xl font-bold text-red-400">{{ losers_count }}</p>
+                    </div>
+                    <div class="text-red-400">
+                        <i class="fas fa-arrow-down text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Watchlist Table -->
+        <div class="bg-gray-800 rounded-lg overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white" onclick="sortWatchlist('name')">
+                                <i class="fas fa-sort mr-1"></i>Name
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white" onclick="sortWatchlist('price')">
+                                <i class="fas fa-sort mr-1"></i>Price
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white" onclick="sortWatchlist('change')">
+                                <i class="fas fa-sort mr-1"></i>24h %
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white" onclick="sortWatchlist('market_cap')">
+                                <i class="fas fa-sort mr-1"></i>Market Cap
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white" onclick="sortWatchlist('volume')">
+                                <i class="fas fa-sort mr-1"></i>Volume (24h)
+                            </th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="watchlistTableBody" class="bg-gray-800 divide-y divide-gray-700">
+                        {% for coin in watchlist_coins %}
+                        <tr class="hover:bg-gray-700 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center cursor-pointer" onclick="window.location.href='{% url 'market:coin_detail' coin.symbol %}'">
+                                    <div>
+                                        <div class="text-sm font-medium text-white">{{ coin.name }}</div>
+                                        <div class="text-sm text-gray-400">{{ coin.symbol }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-white">${{ coin.current_price|floatformat:6 }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if coin.price_change_24h > 0 %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900 text-green-300">
+                                        <i class="fas fa-arrow-up mr-1"></i>
+                                        +{{ coin.price_change_24h }}%
+                                    </span>
+                                {% elif coin.price_change_24h < 0 %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-900 text-red-300">
+                                        <i class="fas fa-arrow-down mr-1"></i>
+                                        {{ coin.price_change_24h }}%
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-700 text-gray-300">
+                                        0.00%
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-300">${{ coin.market_cap|floatformat:0 }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-300">${{ coin.volume_24h|floatformat:0 }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button class="text-yellow-400 hover:text-yellow-300 mr-3" 
+                                        onclick="toggleWatchlist('{{ coin.symbol }}', this)"
+                                        title="Remove from watchlist">
+                                    <i class="fas fa-star"></i>
+                                </button>
+                                <button class="text-blue-400 hover:text-blue-300" 
+                                        onclick="window.location.href='{% url 'market:coin_detail' coin.symbol %}'"
+                                        title="View details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Back to Dashboard Button -->
+        <div class="mt-8 text-center">
+            <a href="{% url 'market:dashboard' %}" 
+               class="inline-flex items-center px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back to Dashboard
+            </a>
+        </div>
+        
+        {% endif %}
+    </div>
+
+    <script>
+        // Get CSRF token
+        function getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]').value;
+        }
+
+        // Toggle watchlist function
+        async function toggleWatchlist(symbol, element) {
+            try {
+                const response = await fetch('/api/toggle-watchlist/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({ symbol: symbol })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Remove the row from the table
+                    const row = element.closest('tr');
+                    row.style.opacity = '0';
+                    row.style.transform = 'translateX(-100%)';
+                    
+                    setTimeout(() => {
+                        row.remove();
+                        updateWatchlistCount();
+                        
+                        // Check if watchlist is empty
+                        const tbody = document.getElementById('watchlistTableBody');
+                        if (tbody.children.length === 0) {
+                            location.reload(); // Reload to show empty state
+                        }
+                    }, 300);
+                } else {
+                    alert('Error removing from watchlist: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error removing from watchlist');
+            }
+        }
+
+        // Update watchlist count
+        function updateWatchlistCount() {
+            const tbody = document.getElementById('watchlistTableBody');
+            const count = tbody ? tbody.children.length : 0;
+            const countElement = document.getElementById('watchlistCount');
+            if (countElement) {
+                countElement.textContent = count;
+            }
+        }
+
+        // Sort watchlist table
+        let sortDirection = {};
+        
+        function sortWatchlist(column) {
+            const tbody = document.getElementById('watchlistTableBody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Toggle sort direction
+            sortDirection[column] = sortDirection[column] === 'asc' ? 'desc' : 'asc';
+            const isAsc = sortDirection[column] === 'asc';
+            
+            rows.sort((a, b) => {
+                let aVal, bVal;
+                
+                switch(column) {
+                    case 'name':
+                        aVal = a.cells[0].textContent.trim().toLowerCase();
+                        bVal = b.cells[0].textContent.trim().toLowerCase();
+                        break;
+                    case 'price':
+                        aVal = parseFloat(a.cells[1].textContent.replace('$', '').replace(',', ''));
+                        bVal = parseFloat(b.cells[1].textContent.replace('$', '').replace(',', ''));
+                        break;
+                    case 'change':
+                        aVal = parseFloat(a.cells[2].textContent.replace('%', '').replace('+', ''));
+                        bVal = parseFloat(b.cells[2].textContent.replace('%', '').replace('+', ''));
+                        break;
+                    case 'market_cap':
+                        aVal = parseFloat(a.cells[3].textContent.replace('$', '').replace(/,/g, ''));
+                        bVal = parseFloat(b.cells[3].textContent.replace('$', '').replace(/,/g, ''));
+                        break;
+                    case 'volume':
+                        aVal = parseFloat(a.cells[4].textContent.replace('$', '').replace(/,/g, ''));
+                        bVal = parseFloat(b.cells[4].textContent.replace('$', '').replace(/,/g, ''));
+                        break;
+                    default:
+                        return 0;
+                }
+                
+                if (aVal < bVal) return isAsc ? -1 : 1;
+                if (aVal > bVal) return isAsc ? 1 : -1;
+                return 0;
+            });
+            
+            // Clear tbody and append sorted rows
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // Add CSS transitions
+        document.addEventListener('DOMContentLoaded', function() {
+            const style = document.createElement('style');
+            style.textContent = `
+                tr {
+                    transition: opacity 0.3s ease, transform 0.3s ease;
+                }
+                .hover\\:bg-gray-700:hover {
+                    transition: background-color 0.2s ease;
+                }
+            `;
+            document.head.appendChild(style);
+        });
+    </script>
+</body>
+</html>

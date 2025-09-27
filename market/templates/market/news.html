@@ -1,0 +1,643 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Crypto News — CryptoTracker Dashboard</title>
+  
+  <!-- CSRF Token for AJAX requests -->
+  <meta name="csrf-token" content="{{ csrf_token }}">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome (icons) -->
+  <script>
+    window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --crypto-dark: #0f1419;
+      --crypto-darker: #0a0e13;
+      --crypto-gray: #1a1f26;
+      --crypto-teal: #14b8a6;
+      --crypto-orange: #f97316;
+      --crypto-text: #e2e8f0;
+      --crypto-muted: #64748b;
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:var(--crypto-dark);
+      color:var(--crypto-text);
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    ::-webkit-scrollbar{ display:none; }
+
+    .sidebar-expanded { width: 280px; }
+    .sidebar-collapsed { width: 80px; }
+    .sidebar-text { transition: opacity 0.3s ease; }
+    .sidebar-collapsed .sidebar-text { opacity: 0; }
+
+    .news-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .news-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(20, 184, 166, 0.1);
+    }
+
+    .filter-btn.active {
+      background-color: var(--crypto-teal);
+      color: white;
+    }
+
+    .filter-btn {
+      transition: all 0.2s ease;
+    }
+  </style>
+
+  <script>
+    /* Tailwind config extension for this static file (optional) */
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'crypto-dark': '#0f1419',
+            'crypto-darker': '#0a0e13',
+            'crypto-gray': '#1a1f26',
+            'crypto-teal': '#14b8a6',
+            'crypto-orange': '#f97316',
+            'crypto-text': '#e2e8f0',
+            'crypto-muted': '#64748b'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-crypto-dark text-crypto-text">
+
+  <!-- Sidebar -->
+  <div id="sidebar" class="fixed left-0 top-0 h-full bg-crypto-darker border-r border-crypto-gray sidebar-expanded z-50 transition-all duration-300">
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-lg flex items-center justify-center">
+            <i class="fa-solid fa-coins text-white text-sm"></i>
+          </div>
+          <span class="font-bold text-xl sidebar-text">CryptoTracker</span>
+        </div>
+        <button id="sidebarToggle" class="text-crypto-muted hover:text-crypto-text transition-colors">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+
+      <nav class="space-y-2">
+        <a href="{% url 'market:dashboard' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-crypto-muted hover:text-crypto-text hover:bg-crypto-gray transition-all cursor-pointer">
+          <i class="fa-solid fa-chart-line w-5"></i>
+          <span class="sidebar-text">Dashboard</span>
+        </a>
+        <a href="{% url 'market:watchlist' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-crypto-muted hover:text-crypto-text hover:bg-crypto-gray transition-all cursor-pointer">
+          <i class="fa-solid fa-star w-5"></i>
+          <span class="sidebar-text">Watchlist</span>
+        </a>
+        <span class="flex items-center space-x-3 px-4 py-3 rounded-lg bg-crypto-teal/10 text-crypto-teal cursor-pointer">
+          <i class="fa-solid fa-newspaper w-5"></i>
+          <span class="sidebar-text">News</span>
+        </span>
+        <a href="{% url 'market:portfolio' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-crypto-muted hover:text-crypto-text hover:bg-crypto-gray transition-all cursor-pointer">
+          <i class="fa-solid fa-briefcase w-5"></i>
+          <span class="sidebar-text">Portfolio</span>
+        </a>
+        <span class="flex items-center space-x-3 px-4 py-3 rounded-lg text-crypto-muted hover:text-crypto-text hover:bg-crypto-gray transition-all cursor-pointer">
+          <i class="fa-solid fa-cog w-5"></i>
+          <span class="sidebar-text">Settings</span>
+        </span>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="mainContent" class="ml-[280px] transition-all duration-300">
+    <!-- Header -->
+    <header id="header" class="bg-crypto-darker border-b border-crypto-gray px-8 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-6">
+          <h1 class="text-2xl font-bold">Crypto News</h1>
+          <div class="flex items-center space-x-4">
+            <button class="filter-btn active px-4 py-2 bg-crypto-teal text-white rounded-lg hover:bg-crypto-teal/80 transition-colors"
+                    data-filter="all" onclick="filterNews('all', this)">
+              <i class="fa-solid fa-globe mr-2"></i>All News
+            </button>
+            <button class="filter-btn px-4 py-2 text-crypto-muted hover:text-crypto-text transition-colors"
+                    data-filter="bitcoin" onclick="filterNews('bitcoin', this)">
+              <i class="fa-brands fa-bitcoin mr-2"></i>Bitcoin
+            </button>
+            <button class="filter-btn px-4 py-2 text-crypto-muted hover:text-crypto-text transition-colors"
+                    data-filter="ethereum" onclick="filterNews('ethereum', this)">
+              <i class="fa-brands fa-ethereum mr-2"></i>Ethereum
+            </button>
+            <button class="filter-btn px-4 py-2 text-crypto-muted hover:text-crypto-text transition-colors"
+                    data-filter="defi" onclick="filterNews('defi', this)">
+              <i class="fa-solid fa-coins mr-2"></i>DeFi
+            </button>
+          </div>
+        </div>
+        <div class="flex items-center space-x-4">
+          <span class="text-sm text-crypto-muted">Last updated: <span class="text-crypto-teal">{{ last_updated|default:"Now" }}</span></span>
+          <button class="px-4 py-2 bg-crypto-gray hover:bg-crypto-gray/70 text-crypto-text rounded-lg transition-colors"
+                  onclick="refreshNews()">
+            <i class="fa-solid fa-refresh mr-2"></i>Refresh
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content Area -->
+    <main class="p-8">
+      <!-- Featured News Section -->
+      {% if featured_articles %}
+      <section class="mb-10">
+        <h2 class="text-xl font-bold text-crypto-text mb-6 flex items-center">
+          <i class="fa-solid fa-fire text-crypto-orange mr-3"></i>
+          Featured Stories
+        </h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {% for article in featured_articles %}
+          <article class="news-card bg-crypto-gray rounded-xl border border-crypto-gray p-6 cursor-pointer" 
+                   onclick="openArticle('{{ article.url }}')">
+            <div class="flex items-start space-x-4">
+              {% if article.image %}
+              <img src="{{ article.image }}" alt="{{ article.title }}" 
+                   class="w-24 h-24 rounded-lg object-cover flex-shrink-0">
+              {% else %}
+              <div class="w-24 h-24 bg-crypto-darker rounded-lg flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-newspaper text-crypto-muted text-2xl"></i>
+              </div>
+              {% endif %}
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center space-x-2 mb-2">
+                  <span class="px-2 py-1 bg-crypto-teal/10 text-crypto-teal text-xs font-medium rounded-full">
+                    {{ article.category|default:"Crypto" }}
+                  </span>
+                  <span class="text-crypto-muted text-sm">{{ article.published_at }}</span>
+                </div>
+                <h3 class="text-lg font-semibold text-crypto-text mb-2 line-clamp-2">{{ article.title }}</h3>
+                <p class="text-crypto-muted text-sm mb-3 line-clamp-2">{{ article.description }}</p>
+                <div class="flex items-center justify-between">
+                  <span class="text-crypto-muted text-xs">{{ article.source }}</span>
+                  <div class="flex items-center space-x-2">
+                    <button class="text-crypto-teal hover:text-crypto-teal/70 transition-colors"
+                            onclick="event.stopPropagation(); shareArticle('{{ article.url }}', '{{ article.title }}')">
+                      <i class="fa-solid fa-share text-sm"></i>
+                    </button>
+                    <button class="text-crypto-muted hover:text-crypto-text transition-colors"
+                            onclick="event.stopPropagation(); bookmarkArticle('{{ article.id }}', this)">
+                      <i class="fa-regular fa-bookmark text-sm"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      <!-- Latest News Section -->
+      <section>
+        <h2 class="text-xl font-bold text-crypto-text mb-6 flex items-center">
+          <i class="fa-solid fa-clock text-crypto-teal mr-3"></i>
+          Latest News
+        </h2>
+        
+        {% if articles %}
+        <div id="newsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {% for article in articles %}
+          <article class="news-card bg-crypto-gray rounded-xl border border-crypto-gray overflow-hidden cursor-pointer"
+                   data-category="{{ article.category|lower }}"
+                   onclick="openArticle('{{ article.url }}')">
+            {% if article.image %}
+            <img src="{{ article.image }}" alt="{{ article.title }}" 
+                 class="w-full h-48 object-cover">
+            {% else %}
+            <div class="w-full h-48 bg-crypto-darker flex items-center justify-center">
+              <i class="fa-solid fa-newspaper text-crypto-muted text-3xl"></i>
+            </div>
+            {% endif %}
+            
+            <div class="p-6">
+              <div class="flex items-center space-x-2 mb-3">
+                <span class="px-2 py-1 bg-crypto-teal/10 text-crypto-teal text-xs font-medium rounded-full">
+                  {{ article.category|default:"Crypto" }}
+                </span>
+                <span class="text-crypto-muted text-sm">{{ article.published_at }}</span>
+              </div>
+              
+              <h3 class="text-lg font-semibold text-crypto-text mb-3 line-clamp-2">{{ article.title }}</h3>
+              <p class="text-crypto-muted text-sm mb-4 line-clamp-3">{{ article.description }}</p>
+              
+              <div class="flex items-center justify-between">
+                <span class="text-crypto-muted text-xs">{{ article.source }}</span>
+                <div class="flex items-center space-x-2">
+                  <button class="text-crypto-teal hover:text-crypto-teal/70 transition-colors"
+                          onclick="event.stopPropagation(); shareArticle('{{ article.url }}', '{{ article.title }}')">
+                    <i class="fa-solid fa-share text-sm"></i>
+                  </button>
+                  <button class="text-crypto-muted hover:text-crypto-text transition-colors"
+                          onclick="event.stopPropagation(); bookmarkArticle('{{ article.id }}', this)">
+                    <i class="fa-regular fa-bookmark text-sm"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        
+        <!-- Load More Button -->
+        <div class="text-center mt-10">
+          <button id="loadMoreBtn" class="px-6 py-3 bg-crypto-teal hover:bg-crypto-teal/80 text-white font-medium rounded-lg transition-colors"
+                  onclick="loadMoreNews()">
+            <i class="fa-solid fa-plus mr-2"></i>Load More Articles
+          </button>
+        </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-20">
+          {% if news_status != 'success' %}
+            <div class="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i class="fa-solid fa-exclamation-triangle text-4xl text-red-400"></i>
+            </div>
+            <h3 class="text-xl font-bold text-crypto-text mb-2">Unable to Load News</h3>
+            {% if not has_api_key %}
+              <p class="text-crypto-muted mb-4">No NewsAPI key configured. Real news requires an API key.</p>
+              <div class="bg-crypto-gray rounded-lg p-4 mb-6 max-w-md mx-auto">
+                <h4 class="font-medium text-crypto-text mb-2">To get real news:</h4>
+                <ol class="text-sm text-crypto-muted text-left">
+                  <li>1. Get a free API key from <a href="https://newsapi.org" target="_blank" class="text-crypto-teal hover:underline">NewsAPI.org</a></li>
+                  <li>2. Add it to your settings.py file</li>
+                  <li>3. Refresh this page</li>
+                </ol>
+              </div>
+            {% else %}
+              <p class="text-crypto-muted mb-4">
+                {% if error_message %}
+                  {{ error_message }}
+                {% else %}
+                  Unable to fetch news from API. Please try again later.
+                {% endif %}
+              </p>
+            {% endif %}
+            <button class="px-6 py-3 bg-crypto-teal hover:bg-crypto-teal/80 text-white font-medium rounded-lg transition-colors"
+                    onclick="refreshNews()">
+              <i class="fa-solid fa-refresh mr-2"></i>Try Again
+            </button>
+          {% else %}
+            <div class="w-24 h-24 bg-crypto-gray rounded-full flex items-center justify-center mx-auto mb-4">
+              <i class="fa-solid fa-newspaper text-4xl text-crypto-muted"></i>
+            </div>
+            <h3 class="text-xl font-bold text-crypto-text mb-2">No News Articles Found</h3>
+            <p class="text-crypto-muted mb-6">No articles available for this category right now</p>
+            <button class="px-6 py-3 bg-crypto-teal hover:bg-crypto-teal/80 text-white font-medium rounded-lg transition-colors"
+                    onclick="refreshNews()">
+              <i class="fa-solid fa-refresh mr-2"></i>Refresh News
+            </button>
+          {% endif %}
+        </div>
+        {% endif %}
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // Sidebar toggle functionality
+    document.getElementById('sidebarToggle').addEventListener('click', function() {
+      const sidebar = document.getElementById('sidebar');
+      const mainContent = document.getElementById('mainContent');
+      
+      if (sidebar.classList.contains('sidebar-expanded')) {
+        sidebar.classList.remove('sidebar-expanded');
+        sidebar.classList.add('sidebar-collapsed');
+        mainContent.classList.remove('ml-[280px]');
+        mainContent.classList.add('ml-[80px]');
+      } else {
+        sidebar.classList.remove('sidebar-collapsed');
+        sidebar.classList.add('sidebar-expanded');
+        mainContent.classList.remove('ml-[80px]');
+        mainContent.classList.add('ml-[280px]');
+      }
+    });
+
+    // Filter news articles
+    async function filterNews(category, buttonElement) {
+      // Reset pagination when filtering
+      currentPage = 1;
+      currentCategory = category;
+      
+      // Update active button
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active', 'bg-crypto-teal', 'text-white');
+        btn.classList.add('text-crypto-muted');
+      });
+      
+      buttonElement.classList.add('active', 'bg-crypto-teal', 'text-white');
+      buttonElement.classList.remove('text-crypto-muted');
+
+      // Show loading state
+      const newsGrid = document.getElementById('newsGrid');
+      if (newsGrid) {
+        newsGrid.innerHTML = '<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-crypto-teal text-2xl"></i><p class="text-crypto-muted mt-2">Loading news...</p></div>';
+      }
+
+      try {
+        // Fetch filtered news from API
+        const response = await fetch(`/api/news/?category=${category}&page=1`);
+        const data = await response.json();
+        
+        if (data.success && newsGrid) {
+          if (data.articles && data.articles.length > 0) {
+            // Update the news grid with new articles
+            newsGrid.innerHTML = data.articles.map(article => `
+              <article class="news-card bg-crypto-gray rounded-xl border border-crypto-gray overflow-hidden cursor-pointer"
+                       data-category="${article.category.toLowerCase()}"
+                       onclick="openArticle('${article.url}')">
+                ${article.image ? 
+                  `<img src="${article.image}" alt="${article.title}" class="w-full h-48 object-cover">` :
+                  `<div class="w-full h-48 bg-crypto-darker flex items-center justify-center">
+                     <i class="fa-solid fa-newspaper text-crypto-muted text-3xl"></i>
+                   </div>`
+                }
+                
+                <div class="p-6">
+                  <div class="flex items-center space-x-2 mb-3">
+                    <span class="px-2 py-1 bg-crypto-teal/10 text-crypto-teal text-xs font-medium rounded-full">
+                      ${article.category}
+                    </span>
+                    <span class="text-crypto-muted text-sm">${article.published_at}</span>
+                  </div>
+                  
+                  <h3 class="text-lg font-semibold text-crypto-text mb-3 line-clamp-2">${article.title}</h3>
+                  <p class="text-crypto-muted text-sm mb-4 line-clamp-3">${article.description || 'No description available'}</p>
+                  
+                  <div class="flex items-center justify-between">
+                    <span class="text-crypto-muted text-xs">${article.source}</span>
+                    <div class="flex items-center space-x-2">
+                      <button class="text-crypto-teal hover:text-crypto-teal/70 transition-colors"
+                              onclick="event.stopPropagation(); shareArticle('${article.url}', '${article.title}')">
+                        <i class="fa-solid fa-share text-sm"></i>
+                      </button>
+                      <button class="text-crypto-muted hover:text-crypto-text transition-colors"
+                              onclick="event.stopPropagation(); bookmarkArticle('${article.id}', this)">
+                        <i class="fa-regular fa-bookmark text-sm"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            `).join('');
+            
+            // Show/hide load more button based on available results
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            if (loadMoreBtn) {
+              if (data.articles.length >= 20 && data.total_results > 20) {
+                loadMoreBtn.style.display = 'inline-flex';
+                loadMoreBtn.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Load More Articles';
+                loadMoreBtn.disabled = false;
+              } else {
+                loadMoreBtn.style.display = 'none';
+              }
+            }
+          } else {
+            // Show empty state
+            newsGrid.innerHTML = `
+              <div class="col-span-full text-center py-10">
+                <div class="w-16 h-16 bg-crypto-gray rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i class="fa-solid fa-newspaper text-2xl text-crypto-muted"></i>
+                </div>
+                <h3 class="text-lg font-bold text-crypto-text mb-2">No articles found</h3>
+                <p class="text-crypto-muted">No ${category === 'all' ? '' : category} news articles available at the moment</p>
+              </div>
+            `;
+            
+            // Hide load more button
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            if (loadMoreBtn) {
+              loadMoreBtn.style.display = 'none';
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching news:', error);
+        if (newsGrid) {
+          newsGrid.innerHTML = `
+            <div class="col-span-full text-center py-10">
+              <div class="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-exclamation-triangle text-2xl text-red-400"></i>
+              </div>
+              <h3 class="text-lg font-bold text-crypto-text mb-2">Error loading news</h3>
+              <p class="text-crypto-muted mb-4">Unable to fetch news articles. Please try again.</p>
+              <button onclick="location.reload()" class="px-4 py-2 bg-crypto-teal hover:bg-crypto-teal/80 text-white rounded-lg transition-colors">
+                <i class="fa-solid fa-refresh mr-2"></i>Retry
+              </button>
+            </div>
+          `;
+        }
+      }
+    }
+
+    // Open article in new tab
+    function openArticle(url) {
+      window.open(url, '_blank');
+    }
+
+    // Share article
+    function shareArticle(url, title) {
+      if (navigator.share) {
+        navigator.share({
+          title: title,
+          url: url
+        });
+      } else {
+        navigator.clipboard.writeText(url);
+        alert('Article URL copied to clipboard!');
+      }
+    }
+
+    // Bookmark article
+    function bookmarkArticle(articleId, buttonElement) {
+      const icon = buttonElement.querySelector('i');
+      if (icon.classList.contains('fa-regular')) {
+        icon.classList.remove('fa-regular');
+        icon.classList.add('fa-solid');
+        buttonElement.classList.add('text-crypto-teal');
+      } else {
+        icon.classList.remove('fa-solid');
+        icon.classList.add('fa-regular');
+        buttonElement.classList.remove('text-crypto-teal');
+      }
+    }
+
+    // Refresh news
+    function refreshNews() {
+      location.reload();
+    }
+
+    // Load more news
+    let currentPage = 1;
+    let currentCategory = 'all';
+    let isLoading = false;
+
+    async function loadMoreNews() {
+      if (isLoading) return;
+      
+      const btn = document.getElementById('loadMoreBtn');
+      const originalText = btn.innerHTML;
+      isLoading = true;
+      
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...';
+      btn.disabled = true;
+      
+      try {
+        currentPage += 1;
+        
+        // Fetch more articles from the next page
+        const response = await fetch(`/api/news/?category=${currentCategory}&page=${currentPage}`);
+        const data = await response.json();
+        
+        if (data.success && data.articles && data.articles.length > 0) {
+          const newsGrid = document.getElementById('newsGrid');
+          
+          // Create new article elements
+          const newArticles = data.articles.map(article => `
+            <article class="news-card bg-crypto-gray rounded-xl border border-crypto-gray overflow-hidden cursor-pointer"
+                     data-category="${article.category.toLowerCase()}"
+                     onclick="openArticle('${article.url}')">
+              ${article.image ? 
+                `<img src="${article.image}" alt="${article.title}" class="w-full h-48 object-cover">` :
+                `<div class="w-full h-48 bg-crypto-darker flex items-center justify-center">
+                   <i class="fa-solid fa-newspaper text-crypto-muted text-3xl"></i>
+                 </div>`
+              }
+              
+              <div class="p-6">
+                <div class="flex items-center space-x-2 mb-3">
+                  <span class="px-2 py-1 bg-crypto-teal/10 text-crypto-teal text-xs font-medium rounded-full">
+                    ${article.category}
+                  </span>
+                  <span class="text-crypto-muted text-sm">${article.published_at}</span>
+                </div>
+                
+                <h3 class="text-lg font-semibold text-crypto-text mb-3 line-clamp-2">${article.title}</h3>
+                <p class="text-crypto-muted text-sm mb-4 line-clamp-3">${article.description || 'No description available'}</p>
+                
+                <div class="flex items-center justify-between">
+                  <span class="text-crypto-muted text-xs">${article.source}</span>
+                  <div class="flex items-center space-x-2">
+                    <button class="text-crypto-teal hover:text-crypto-teal/70 transition-colors"
+                            onclick="event.stopPropagation(); shareArticle('${article.url}', '${article.title}')">
+                      <i class="fa-solid fa-share text-sm"></i>
+                    </button>
+                    <button class="text-crypto-muted hover:text-crypto-text transition-colors"
+                            onclick="event.stopPropagation(); bookmarkArticle('${article.id}', this)">
+                      <i class="fa-regular fa-bookmark text-sm"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          `).join('');
+          
+          // Append new articles to the grid
+          newsGrid.insertAdjacentHTML('beforeend', newArticles);
+          
+          // Add fade-in animation to new articles
+          const newElements = newsGrid.querySelectorAll('article:nth-last-child(-n+' + data.articles.length + ')');
+          newElements.forEach((element, index) => {
+            element.style.opacity = '0';
+            element.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+              element.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+              element.style.opacity = '1';
+              element.style.transform = 'translateY(0)';
+            }, index * 100);
+          });
+          
+          // Check if there are more articles to load
+          const totalArticles = newsGrid.querySelectorAll('article').length;
+          if (totalArticles >= data.total_results || data.articles.length < 20) {
+            btn.style.display = 'none';
+            
+            // Show "end of results" message
+            const endMessage = document.createElement('div');
+            endMessage.className = 'text-center mt-8 text-crypto-muted';
+            endMessage.innerHTML = `
+              <i class="fa-solid fa-check-circle text-crypto-teal mr-2"></i>
+              You've reached the end of ${currentCategory === 'all' ? 'all' : currentCategory} news
+            `;
+            btn.parentNode.replaceChild(endMessage, btn);
+          } else {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            isLoading = false;
+          }
+        } else {
+          // No more articles available
+          btn.style.display = 'none';
+          
+          const endMessage = document.createElement('div');
+          endMessage.className = 'text-center mt-8 text-crypto-muted';
+          endMessage.innerHTML = `
+            <i class="fa-solid fa-info-circle text-crypto-teal mr-2"></i>
+            No more articles available
+          `;
+          btn.parentNode.replaceChild(endMessage, btn);
+        }
+      } catch (error) {
+        console.error('Error loading more articles:', error);
+        btn.innerHTML = `<i class="fa-solid fa-exclamation-triangle mr-2"></i>Error loading articles`;
+        btn.disabled = false;
+        isLoading = false;
+        
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+        }, 3000);
+      }
+    }
+
+    // Add CSS for line clamping
+    document.addEventListener('DOMContentLoaded', function() {
+      const style = document.createElement('style');
+      style.textContent = `
+        .line-clamp-2 {
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+        }
+        .line-clamp-3 {
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 3;
+        }
+      `;
+      document.head.appendChild(style);
+    });
+  </script>
+
+</body>
+</html>

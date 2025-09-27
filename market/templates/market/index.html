@@ -1,0 +1,2117 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CryptoTracker — Dashboard</title>
+  
+  <!-- CSRF Token for AJAX requests -->
+  <meta name="csrf-token" content="{{ csrf_token }}">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome (icons) -->
+  <script>
+    window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <!-- Highcharts -->
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="https://code.highcharts.com/modules/exporting.js"></script>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --crypto-dark: #0f1419;
+      --crypto-darker: #0a0e13;
+      --crypto-gray: #1a1f26;
+      --crypto-teal: #14b8a6;
+      --crypto-orange: #f97316;
+      --crypto-text: #e2e8f0;
+      --crypto-muted: #64748b;
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:var(--crypto-dark);
+      color:var(--crypto-text);
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    ::-webkit-scrollbar{ display:none; }
+
+    .sidebar-collapsed { width: 80px !important; }
+    .sidebar-expanded { width: 280px !important; }
+    .chart-container { transition: all 0.3s ease; }
+    .hover-highlight { transition: all 0.2s ease; }
+    .hover-highlight:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+
+    /* small helper classes not in Tailwind for this static file */
+    .bg-crypto-dark { background: var(--crypto-dark); }
+    .bg-crypto-darker { background: var(--crypto-darker); }
+    .bg-crypto-gray { background: var(--crypto-gray); }
+    .text-crypto-text { color: var(--crypto-text); }
+    .text-crypto-muted { color: var(--crypto-muted); }
+    .text-crypto-teal { color: var(--crypto-teal); }
+    .text-crypto-orange { color: var(--crypto-orange); }
+    .border-crypto-gray { border-color: rgba(255,255,255,0.03); }
+    .rounded-xl { border-radius: 0.75rem; }
+    .rounded-lg { border-radius: 0.5rem; }
+
+    /* highlighted section example (optional) */
+    .highlighted-section {
+      outline: 2px solid rgba(63,32,251,0.25);
+      background-color: rgba(63,32,251,0.03);
+    }
+
+    /* Search dropdown styling */
+    #searchDropdown {
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Custom scrollbar for search results */
+    #searchDropdown::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #searchDropdown::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #searchDropdown::-webkit-scrollbar-thumb {
+      background: var(--crypto-muted);
+      border-radius: 3px;
+    }
+
+    #searchDropdown::-webkit-scrollbar-thumb:hover {
+      background: var(--crypto-teal);
+    }
+
+    /* Sortable table header styling */
+    th.cursor-pointer:hover {
+      background-color: rgba(20, 184, 166, 0.1);
+    }
+
+    th.cursor-pointer:active {
+      background-color: rgba(20, 184, 166, 0.2);
+    }
+  </style>
+
+  <script>
+    /* Tailwind config extension for this static file (optional) */
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'crypto-dark': '#0f1419',
+            'crypto-darker': '#0a0e13',
+            'crypto-gray': '#1a1f26',
+            'crypto-teal': '#14b8a6',
+            'crypto-orange': '#f97316',
+            'crypto-text': '#e2e8f0',
+            'crypto-muted': '#64748b'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-crypto-dark text-crypto-text">
+
+  <!-- Sidebar -->
+  <div id="sidebar" class="fixed left-0 top-0 h-full bg-crypto-darker border-r border-crypto-gray sidebar-expanded z-50 transition-all duration-300">
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-lg flex items-center justify-center">
+            <i class="fa-solid fa-coins text-white text-sm"></i>
+          </div>
+          <span class="font-bold text-xl sidebar-text">CryptoTracker</span>
+        </div>
+        <button id="sidebarToggle" class="text-crypto-muted hover:text-crypto-text transition-colors">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+
+      <nav class="space-y-2">
+        <span class="flex items-center space-x-3 px-4 py-3 rounded-lg bg-crypto-teal/10 text-crypto-teal cursor-pointer">
+          <i class="fa-solid fa-chart-line w-5"></i>
+          <span class="sidebar-text">Dashboard</span>
+        </span>
+        <a href="{% url 'market:watchlist' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-crypto-muted hover:text-crypto-text hover:bg-crypto-gray transition-all cursor-pointer">
+          <i class="fa-solid fa-star w-5"></i>
+          <span class="sidebar-text">Watchlist</span>
+        </a>
+        <a href="{% url 'market:news' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-crypto-muted hover:text-crypto-text hover:bg-crypto-gray transition-all cursor-pointer">
+          <i class="fa-solid fa-newspaper w-5"></i>
+          <span class="sidebar-text">News</span>
+        </a>
+        <a href="{% url 'market:portfolio' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-crypto-muted hover:text-crypto-text hover:bg-crypto-gray transition-all cursor-pointer">
+          <i class="fa-solid fa-briefcase w-5"></i>
+          <span class="sidebar-text">Portfolio</span>
+        </a>
+        <a href="{% url 'market:settings' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-crypto-muted hover:text-crypto-text hover:bg-crypto-gray transition-all cursor-pointer">
+          <i class="fa-solid fa-cog w-5"></i>
+          <span class="sidebar-text">Settings</span>
+        </a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="mainContent" class="ml-[280px] transition-all duration-300">
+    <!-- Header -->
+    <header id="header" class="bg-crypto-darker border-b border-crypto-gray px-8 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-6">
+          <h1 class="text-2xl font-bold">Dashboard</h1>
+          <div class="flex items-center space-x-4">
+            <button 
+              id="filterAll" 
+              class="filter-btn px-4 py-2 bg-crypto-teal text-white rounded-lg hover:bg-crypto-teal/80 transition-colors"
+              data-filter="all"
+            >
+              <i class="fa-solid fa-filter mr-2"></i>All
+            </button>
+            <button 
+              id="filterGainers" 
+              class="filter-btn px-4 py-2 text-crypto-muted hover:text-crypto-text transition-colors"
+              data-filter="gainers"
+            >
+              <i class="fa-solid fa-arrow-trend-up mr-2"></i>Gainers
+            </button>
+            <button 
+              id="filterLosers" 
+              class="filter-btn px-4 py-2 text-crypto-muted hover:text-crypto-text transition-colors"
+              data-filter="losers"
+            >
+              <i class="fa-solid fa-arrow-trend-down mr-2"></i>Losers
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+          <div class="relative" id="searchContainer">
+            <input 
+              type="text" 
+              id="searchInput"
+              placeholder="Search coins..." 
+              class="bg-crypto-gray border border-crypto-gray rounded-lg px-4 py-2 pl-10 pr-4 w-64 focus:outline-none focus:border-crypto-teal transition-colors" 
+              autocomplete="off"
+            />
+            <i class="fa-solid fa-search absolute left-3 top-3 text-crypto-muted"></i>
+            <div 
+              id="searchDropdown" 
+              class="absolute top-full left-0 right-0 bg-crypto-card border border-crypto-gray rounded-lg shadow-lg mt-2 max-h-80 overflow-y-auto z-50 hidden"
+            >
+              <!-- Search results will be populated here -->
+            </div>
+          </div>
+          
+          <!-- Authentication Section -->
+          {% if user.is_authenticated %}
+            <div class="relative" id="userDropdown">
+              <button id="userDropdownBtn" class="flex items-center space-x-3 bg-crypto-gray hover:bg-crypto-muted/20 rounded-lg px-4 py-2 transition-colors">
+                <div class="w-8 h-8 bg-crypto-teal rounded-lg flex items-center justify-center">
+                  <i class="fa-solid fa-user text-white text-sm"></i>
+                </div>
+                <span class="text-crypto-text font-medium">{{ user.username }}</span>
+                <i class="fa-solid fa-chevron-down text-crypto-muted text-xs"></i>
+              </button>
+              
+              <!-- Dropdown Menu -->
+              <div id="userDropdownMenu" class="absolute right-0 top-full mt-2 w-48 bg-crypto-card border border-crypto-gray rounded-lg shadow-lg py-2 z-50 hidden">
+                <a href="{% url 'users:profile' %}" class="flex items-center space-x-3 px-4 py-2 hover:bg-crypto-gray transition-colors text-crypto-text">
+                  <i class="fa-solid fa-user-circle text-crypto-teal"></i>
+                  <span>Profile</span>
+                </a>
+                <a href="{% url 'market:settings' %}" class="flex items-center space-x-3 px-4 py-2 hover:bg-crypto-gray transition-colors text-crypto-text">
+                  <i class="fa-solid fa-cog text-crypto-muted"></i>
+                  <span>Settings</span>
+                </a>
+                <a href="{% url 'market:portfolio' %}" class="flex items-center space-x-3 px-4 py-2 hover:bg-crypto-gray transition-colors text-crypto-text">
+                  <i class="fa-solid fa-briefcase text-crypto-orange"></i>
+                  <span>Portfolio</span>
+                </a>
+                <div class="border-t border-crypto-gray my-2"></div>
+                <a href="{% url 'users:logout' %}" class="flex items-center space-x-3 px-4 py-2 hover:bg-crypto-gray transition-colors text-red-400 hover:text-red-300">
+                  <i class="fa-solid fa-sign-out-alt"></i>
+                  <span>Logout</span>
+                </a>
+              </div>
+            </div>
+          {% else %}
+            <div class="flex items-center space-x-3">
+              <a 
+                href="{% url 'users:login' %}" 
+                class="bg-crypto-gray hover:bg-crypto-muted/20 text-crypto-text border border-crypto-muted/20 font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                <i class="fa-solid fa-sign-in-alt mr-2"></i>
+                Login
+              </a>
+              <a 
+                href="{% url 'users:register' %}" 
+                class="bg-gradient-to-r from-crypto-teal to-crypto-orange hover:from-crypto-teal/80 hover:to-crypto-orange/80 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200"
+              >
+                <i class="fa-solid fa-user-plus mr-2"></i>
+                Sign Up
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <!-- Main -->
+    <main class="p-8">
+      <!-- Market Overview Cards -->
+      <div id="marketOverview" class="grid grid-cols-4 gap-6 mb-8">
+        <div class="bg-crypto-gray rounded-xl p-6 hover-highlight">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-crypto-muted">Market Cap</span>
+            <i class="fa-solid fa-chart-pie text-crypto-teal"></i>
+          </div>
+          <div class="text-2xl font-bold" id="marketCap">${{ selected_coin.market_cap|floatformat:0 }}</div>
+          <div class="text-sm text-green-400">+2.4%</div>
+        </div>
+
+        <div class="bg-crypto-gray rounded-xl p-6 hover-highlight">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-crypto-muted">24h Volume</span>
+            <i class="fa-solid fa-exchange-alt text-crypto-orange"></i>
+          </div>
+          <div class="text-2xl font-bold" id="volume24h">${{ selected_coin.volume_24h|floatformat:0 }}</div>
+          <div class="text-sm text-red-400">-1.2%</div>
+        </div>
+
+        <div class="bg-crypto-gray rounded-xl p-6 hover-highlight">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-crypto-muted" id="thirdCardLabel">BTC Dominance</span>
+            <i class="fa-brands fa-bitcoin text-crypto-teal" id="thirdCardIcon"></i>
+          </div>
+          <div class="text-2xl font-bold" id="btcDominance">{{ selected_coin.btc_dominance|floatformat:1 }}%</div>
+          <div class="text-sm text-green-400">+0.8%</div>
+        </div>
+
+        <div class="bg-crypto-gray rounded-xl p-6 hover-highlight">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-crypto-muted">Fear &amp; Greed Index</span>
+            <i class="fa-solid fa-chart-line text-crypto-orange"></i>
+          </div>
+          <div class="flex items-center space-x-4 mb-3">
+            <div class="text-2xl font-bold" id="fearGreed">{{ selected_coin.fear_greed }}</div>
+            <div class="flex-1">
+              <!-- Fear & Greed Gauge -->
+              <div class="h-2 bg-crypto-darker rounded-full overflow-hidden">
+                <div id="fearGreedBar" class="h-full transition-all duration-500 rounded-full" style="width: {{ selected_coin.fear_greed }}%;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="text-sm" id="fearGreedLabel">Neutral</div>
+        </div>
+      </div>
+
+      <!-- Price Chart + Watchlist -->
+      <div class="grid grid-cols-3 gap-8">
+        <div id="priceChart" class="col-span-2 bg-crypto-gray rounded-xl p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold" id="chartTitle">{{ selected_coin.name }} Price</h2>
+            <div class="flex items-center space-x-4">
+              <button id="period-1h" class="text-crypto-muted hover:text-crypto-teal transition-colors" onclick="changeTimePeriod('1h')">1H</button>
+              <button id="period-24h" class="text-crypto-muted hover:text-crypto-teal transition-colors" onclick="changeTimePeriod('24h')">24H</button>
+              <button id="period-7d" class="text-crypto-teal" onclick="changeTimePeriod('7d')">7D</button>
+              <button id="period-30d" class="text-crypto-muted hover:text-crypto-teal transition-colors" onclick="changeTimePeriod('30d')">30D</button>
+            </div>
+          </div>
+          <div id="coinChart" class="h-80"></div>
+        </div>
+
+        <div id="watchlist" class="bg-crypto-gray rounded-xl p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold">Watchlist</h2>
+            <button id="addToWatchlistBtn" class="text-crypto-teal hover:text-crypto-teal/80 relative" onclick="toggleAddWatchlistModal()">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+          </div>
+
+          <!-- Add to Watchlist Modal/Dropdown -->
+          <div id="addWatchlistModal" class="hidden mb-4 bg-crypto-darker rounded-lg p-4 border border-crypto-gray">
+            <div class="mb-3">
+              <input type="text" id="coinSearch" placeholder="Search for cryptocurrency..." 
+                     class="w-full bg-crypto-gray border border-crypto-gray rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-crypto-teal"
+                     oninput="searchCoins(this.value)">
+            </div>
+            <div id="coinResults" class="max-h-40 overflow-y-auto space-y-1">
+              <!-- Search results will appear here -->
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            {% if watchlist %}
+              {% for item in watchlist %}
+              <div class="flex items-center justify-between p-3 rounded-lg hover:bg-crypto-darker transition-colors cursor-pointer coin-row watchlist-item" 
+                   data-symbol="{{ item.coin.symbol }}" 
+                   data-name="{{ item.coin.name }}"
+                   oncontextmenu="showWatchlistContextMenu(event, '{{ item.coin.symbol }}', '{{ item.coin.name }}')">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-full flex items-center justify-center">
+                    <span class="text-white text-xs font-bold">{{ item.coin.symbol|slice:":2" }}</span>
+                  </div>
+                  <div>
+                    <div class="font-medium">{{ item.coin.name }}</div>
+                    <div class="text-sm text-crypto-muted">{{ item.coin.symbol }}</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-bold">${{ item.coin.current_price|floatformat:2 }}</div>
+                  <div class="text-sm text-green-400">+2.4%</div>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <!-- Empty watchlist message -->
+              <div class="text-center py-8 text-crypto-muted">
+                <i class="fa-regular fa-star text-4xl mb-4 opacity-50"></i>
+                <p class="text-lg mb-2">Your watchlist is empty</p>
+                <p class="text-sm">Click the star icon next to any coin to add it to your watchlist</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Coins Table -->
+      <div id="topCoins" class="mt-8 bg-crypto-gray rounded-xl p-6">
+        <h2 class="text-xl font-bold mb-6">Top Cryptocurrencies</h2>
+        <div class="overflow-x-auto">
+          <table id="coinsTable" class="w-full">
+            <thead>
+              <tr class="border-b border-crypto-darker">
+                <th class="text-left py-3 text-crypto-muted font-medium">#</th>
+                <th 
+                  class="text-left py-3 text-crypto-muted font-medium cursor-pointer hover:text-crypto-text transition-colors select-none"
+                  onclick="sortTable('name')"
+                  data-sort="name"
+                >
+                  <div class="flex items-center space-x-1">
+                    <span>Name</span>
+                    <i class="fa-solid fa-sort text-xs opacity-50" id="sort-name"></i>
+                  </div>
+                </th>
+                <th 
+                  class="text-left py-3 text-crypto-muted font-medium cursor-pointer hover:text-crypto-text transition-colors select-none"
+                  onclick="sortTable('price')"
+                  data-sort="price"
+                >
+                  <div class="flex items-center space-x-1">
+                    <span>Price</span>
+                    <i class="fa-solid fa-sort text-xs opacity-50" id="sort-price"></i>
+                  </div>
+                </th>
+                <th 
+                  class="text-left py-3 text-crypto-muted font-medium cursor-pointer hover:text-crypto-text transition-colors select-none"
+                  onclick="sortTable('change')"
+                  data-sort="change"
+                >
+                  <div class="flex items-center space-x-1">
+                    <span>24h %</span>
+                    <i class="fa-solid fa-sort text-xs opacity-50" id="sort-change"></i>
+                  </div>
+                </th>
+                <th 
+                  class="text-left py-3 text-crypto-muted font-medium cursor-pointer hover:text-crypto-text transition-colors select-none"
+                  onclick="sortTable('market_cap')"
+                  data-sort="market_cap"
+                >
+                  <div class="flex items-center space-x-1">
+                    <span>Market Cap</span>
+                    <i class="fa-solid fa-sort text-xs opacity-50" id="sort-market_cap"></i>
+                  </div>
+                </th>
+                <th 
+                  class="text-left py-3 text-crypto-muted font-medium cursor-pointer hover:text-crypto-text transition-colors select-none"
+                  onclick="sortTable('volume')"
+                  data-sort="volume"
+                >
+                  <div class="flex items-center space-x-1">
+                    <span>Volume (24h)</span>
+                    <i class="fa-solid fa-sort text-xs opacity-50" id="sort-volume"></i>
+                  </div>
+                </th>
+                <th class="text-left py-3 text-crypto-muted font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for coin in top_coins %}
+              <tr class="border-b border-crypto-darker/50 hover:bg-crypto-darker transition-colors coin-row" data-symbol="{{ coin.symbol }}">
+                <td class="py-4">{{ forloop.counter }}</td>
+                <td class="py-4">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-full flex items-center justify-center">
+                      <span class="text-white text-xs font-bold">{{ coin.symbol|slice:":2" }}</span>
+                    </div>
+                    <div>
+                      <div class="font-medium">{{ coin.name }}</div>
+                      <div class="text-sm text-crypto-muted">{{ coin.symbol }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="py-4 font-bold">${{ coin.current_price|floatformat:2 }}</td>
+                <td class="py-4 text-green-400">+2.4%</td>
+                <td class="py-4">${{ coin.market_cap|floatformat:0 }}</td>
+                <td class="py-4">${{ coin.volume_24h|floatformat:0 }}</td>
+                <td class="py-4">
+                  <div class="flex space-x-2">
+                    <button class="watchlist-btn text-crypto-muted hover:text-crypto-teal transition-colors" 
+                            data-symbol="{{ coin.symbol }}" 
+                            onclick="toggleWatchlist('{{ coin.symbol }}', this, event)"
+                            title="Add to Watchlist">
+                      <i class="fa-regular fa-star"></i>
+                    </button>
+                    {% if user.is_authenticated %}
+                    <button class="portfolio-btn text-crypto-muted hover:text-crypto-orange transition-colors" 
+                            data-symbol="{{ coin.symbol }}" 
+                            onclick="quickAddToPortfolio('{{ coin.symbol }}', event)"
+                            title="Add to Portfolio">
+                      <i class="fa-solid fa-plus"></i>
+                    </button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Show More Button -->
+        <div id="showMoreContainer" class="mt-6 text-center">
+          <button 
+            id="showMoreBtn" 
+            class="px-6 py-3 bg-crypto-gray border border-crypto-muted text-crypto-text rounded-lg hover:bg-crypto-muted/20 transition-colors hidden"
+            onclick="loadMoreCoins()"
+          >
+            <i class="fa-solid fa-chevron-down mr-2"></i>
+            <span id="showMoreText">Show More</span>
+            <span id="loadingSpinner" class="ml-2 hidden">
+              <i class="fa-solid fa-spinner fa-spin"></i>
+            </span>
+          </button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Context Menu for Watchlist -->
+  <div id="watchlistContextMenu" class="fixed bg-crypto-darker border border-crypto-gray rounded-lg shadow-lg py-2 z-50 hidden">
+    <div class="px-4 py-2 text-sm text-crypto-muted border-b border-crypto-gray" id="contextMenuCoinName">
+      <!-- Coin name will be inserted here -->
+    </div>
+    <button class="w-full text-left px-4 py-2 text-sm hover:bg-crypto-gray transition-colors text-red-400 hover:text-red-300"
+            onclick="removeFromWatchlistContext()">
+      <i class="fa-solid fa-trash-can mr-2"></i>
+      Remove from Watchlist
+    </button>
+  </div>
+
+  <!-- Add to Portfolio Modal -->
+  <div id="portfolioModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-crypto-darker rounded-2xl p-8 w-full max-w-md border border-crypto-gray/30">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold">Add to Portfolio</h2>
+        <button onclick="closePortfolioModal()" class="text-crypto-muted hover:text-crypto-text">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="mb-6">
+        <!-- Coin Info -->
+        <div class="bg-crypto-gray rounded-lg p-4 mb-4">
+          <div class="flex items-center space-x-3">
+            <div id="portfolioCoinIcon" class="w-10 h-10 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-full flex items-center justify-center">
+              <span id="portfolioCoinSymbolIcon" class="text-white text-xs font-bold">BTC</span>
+            </div>
+            <div>
+              <div id="portfolioCoinName" class="font-medium">Bitcoin</div>
+              <div id="portfolioCoinSymbol" class="text-sm text-crypto-muted">BTC</div>
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-crypto-muted/20">
+            <div class="flex justify-between text-sm">
+              <span class="text-crypto-muted">Current Price:</span>
+              <span id="portfolioCurrentPrice" class="font-medium">$0.00</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Buy Amount -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2">Amount to Buy</label>
+          <input 
+            type="number" 
+            id="portfolioAmount" 
+            step="any"
+            placeholder="0.00"
+            min="0"
+            class="w-full bg-crypto-gray border border-crypto-muted/20 rounded-lg px-4 py-2 focus:outline-none focus:border-crypto-teal"
+            required
+          />
+          <div class="text-xs text-crypto-muted mt-1">
+            Enter the amount of <span id="portfolioCoinSymbolText">BTC</span> you want to buy
+          </div>
+        </div>
+
+        <!-- Total Value Preview -->
+        <div class="bg-crypto-gray rounded-lg p-3 mb-4">
+          <div class="flex justify-between text-sm">
+            <span class="text-crypto-muted">Total Value:</span>
+            <span id="portfolioTotalValue" class="font-medium text-crypto-teal">$0.00</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Action Buttons -->
+      <div class="flex space-x-3">
+        <button 
+          type="button" 
+          onclick="closePortfolioModal()" 
+          class="flex-1 bg-crypto-gray hover:bg-crypto-muted/20 text-crypto-text py-3 rounded-lg font-medium transition-colors"
+        >
+          Cancel
+        </button>
+        <button 
+          type="button" 
+          onclick="confirmPortfolioAdd()" 
+          class="flex-1 bg-gradient-to-r from-crypto-teal to-crypto-orange hover:from-crypto-teal/80 hover:to-crypto-orange/80 text-white py-3 rounded-lg font-medium transition-all"
+        >
+          <i class="fa-solid fa-plus mr-2"></i>
+          Add to Portfolio
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    // Authentication status
+    const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
+    
+    let sidebarExpanded = true;
+    const sidebarToggleBtn = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('mainContent');
+    const sidebarTexts = document.querySelectorAll('.sidebar-text');
+
+    sidebarToggleBtn.addEventListener('click', function () {
+      if (sidebarExpanded) {
+        sidebar.classList.remove('sidebar-expanded');
+        sidebar.classList.add('sidebar-collapsed');
+        mainContent.style.marginLeft = '80px';
+        sidebarTexts.forEach(text => text.style.display = 'none');
+      } else {
+        sidebar.classList.remove('sidebar-collapsed');
+        sidebar.classList.add('sidebar-expanded');
+        mainContent.style.marginLeft = '280px';
+        sidebarTexts.forEach(text => text.style.display = 'inline');
+      }
+      sidebarExpanded = !sidebarExpanded;
+    });
+
+    // Chart rendering function
+    function renderChart(name, data, currentPrice) {
+      // If no price history data, generate realistic data around current price
+      if (!data || data.length === 0) {
+        const basePrice = parseFloat(currentPrice) || 50000;
+        data = [
+          basePrice * 0.95,
+          basePrice * 0.97,
+          basePrice * 0.99,
+          basePrice * 1.02,
+          basePrice * 0.98,
+          basePrice * 1.01,
+          basePrice
+        ];
+      }
+
+      Highcharts.chart('coinChart', {
+        chart: {
+          type: 'line',
+          backgroundColor: 'transparent',
+          height: 320
+        },
+        title: { text: null },
+        credits: { enabled: false },
+        xAxis: {
+          categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          gridLineColor: '#1a1f26',
+          lineColor: '#1a1f26',
+          tickColor: '#1a1f26',
+          labels: { style: { color: '#64748b' } }
+        },
+        yAxis: {
+          title: { text: null },
+          gridLineColor: '#1a1f26',
+          lineColor: '#1a1f26',
+          labels: { 
+            style: { color: '#64748b' },
+            formatter: function() {
+              if (this.value >= 1000) {
+                return '$' + (this.value / 1000).toFixed(1) + 'k';
+              } else if (this.value >= 1) {
+                return '$' + this.value.toFixed(2);
+              } else {
+                return '$' + this.value.toFixed(4);
+              }
+            }
+          }
+        },
+        plotOptions: {
+          line: {
+            lineWidth: 3,
+            marker: { enabled: false },
+            states: { hover: { lineWidth: 4 } }
+          }
+        },
+        series: [{
+          name: name + ' Price',
+          data: data,
+          color: '#14b8a6'
+        }],
+        legend: { enabled: false },
+        tooltip: {
+          backgroundColor: '#1a1f26',
+          borderColor: '#14b8a6',
+          style: { color: '#e2e8f0' },
+          shared: false,
+          useHTML: true,
+          formatter: function() {
+            let value;
+            if (this.y >= 1000) {
+              value = '$' + (this.y / 1000).toFixed(1) + 'k';
+            } else if (this.y >= 1) {
+              value = '$' + this.y.toFixed(2);
+            } else {
+              value = '$' + this.y.toFixed(4);
+            }
+            return '<div style="text-align: center;"><b>' + this.series.name + '</b><br/>' + 
+                   '<span style="color: #14b8a6;">' + this.x + '</span><br/>' + 
+                   '<span style="font-size: 14px; font-weight: bold;">' + value + '</span></div>';
+          }
+        }
+      });
+    }
+
+    // Current chart state
+    let currentSymbol = '{{ selected_coin.symbol }}';
+    let currentPeriod = '7d';
+    let currentPrice = {{ selected_coin.current_price }};
+
+    // Change time period for chart
+    function changeTimePeriod(period) {
+      if (currentPeriod === period) return; // Don't reload same period
+      
+      currentPeriod = period;
+      
+      // Update active button styling
+      document.querySelectorAll('[id^="period-"]').forEach(btn => {
+        btn.classList.remove('text-crypto-teal');
+        btn.classList.add('text-crypto-muted');
+      });
+      document.getElementById(`period-${period}`).classList.remove('text-crypto-muted');
+      document.getElementById(`period-${period}`).classList.add('text-crypto-teal');
+      
+      // Generate realistic chart data for the selected period
+      generateRealisticChartData(currentSymbol, period);
+    }
+
+    // Generate realistic chart data for different periods
+    function generateRealisticChartData(symbol, period) {
+      let dataPoints = [];
+      let categories = [];
+      
+      switch(period) {
+        case '1h':
+          // Generate 60 data points for last hour (1 minute intervals)
+          for (let i = 59; i >= 0; i--) {
+            const variance = (Math.random() - 0.5) * 0.005; // ±0.25% variance
+            dataPoints.push(currentPrice * (1 + variance));
+            categories.push(i === 0 ? 'Now' : `${i}m`);
+          }
+          break;
+        case '24h':
+          // Generate 24 data points for last 24 hours  
+          for (let i = 23; i >= 0; i--) {
+            const variance = (Math.random() - 0.5) * 0.03; // ±1.5% variance
+            dataPoints.push(currentPrice * (1 + variance));
+            categories.push(i === 0 ? 'Now' : `${i}h ago`);
+          }
+          break;
+        case '7d':
+          // Generate 7 data points for last 7 days
+          const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+          for (let i = 6; i >= 0; i--) {
+            const variance = (Math.random() - 0.5) * 0.08; // ±4% variance
+            dataPoints.push(currentPrice * (1 + variance));
+            categories.push(days[(new Date().getDay() - i + 7) % 7]);
+          }
+          break;
+        case '30d':
+          // Generate 30 data points for last 30 days
+          for (let i = 29; i >= 0; i--) {
+            const variance = (Math.random() - 0.5) * 0.15; // ±7.5% variance
+            dataPoints.push(currentPrice * (1 + variance));
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            categories.push((date.getMonth() + 1) + '/' + date.getDate());
+          }
+          break;
+      }
+      
+      // Update chart with new categories
+      renderChartWithCategories(document.getElementById('chartTitle').textContent.replace(' Price', ''), dataPoints, currentPrice, categories);
+    }
+
+    // Enhanced chart rendering with custom categories
+    function renderChartWithCategories(name, data, currentPrice, categories) {
+      Highcharts.chart('coinChart', {
+        chart: {
+          type: 'line',
+          backgroundColor: 'transparent',
+          height: 320
+        },
+        title: { text: null },
+        credits: { enabled: false },
+        xAxis: {
+          categories: categories,
+          gridLineColor: '#1a1f26',
+          lineColor: '#1a1f26',
+          tickColor: '#1a1f26',
+          labels: { 
+            style: { color: '#64748b' },
+            rotation: categories.length > 10 ? -45 : 0
+          }
+        },
+        yAxis: {
+          title: { text: null },
+          gridLineColor: '#1a1f26',
+          lineColor: '#1a1f26',
+          labels: { 
+            style: { color: '#64748b' },
+            formatter: function() {
+              if (this.value >= 1000) {
+                return '$' + (this.value / 1000).toFixed(1) + 'k';
+              } else if (this.value >= 1) {
+                return '$' + this.value.toFixed(2);
+              } else {
+                return '$' + this.value.toFixed(4);
+              }
+            }
+          }
+        },
+        plotOptions: {
+          line: {
+            lineWidth: 3,
+            marker: { enabled: false },
+            states: { hover: { lineWidth: 4 } }
+          }
+        },
+        series: [{
+          name: name + ' Price',
+          data: data,
+          color: '#14b8a6'
+        }],
+        legend: { enabled: false },
+        tooltip: {
+          backgroundColor: '#1a1f26',
+          borderColor: '#14b8a6',
+          style: { color: '#e2e8f0' },
+          shared: false,
+          useHTML: true,
+          formatter: function() {
+            let value;
+            if (this.y >= 1000) {
+              value = '$' + (this.y / 1000).toFixed(1) + 'k';
+            } else if (this.y >= 1) {
+              value = '$' + this.y.toFixed(2);
+            } else {
+              value = '$' + this.y.toFixed(4);
+            }
+            return '<div style="text-align: center;"><b>' + this.series.name + '</b><br/>' + 
+                   '<span style="color: #14b8a6;">' + this.x + '</span><br/>' + 
+                   '<span style="font-size: 14px; font-weight: bold;">' + value + '</span></div>';
+          }
+        }
+      });
+    }
+
+    // Initial chart render
+    renderChart('{{ selected_coin.name }}', {{ selected_coin.price_history|safe }}, {{ selected_coin.current_price }});
+
+    // Update dashboard dynamically
+    function updateDashboard(symbol) {
+      fetch(`/coin-data/${symbol}/`)
+        .then(res => res.json())
+        .then(data => {
+          // Update market overview cards with coin-specific data - format large numbers properly
+          const formatLargeNumber = (value) => {
+            if (value >= 1000000000000) { // Trillions
+              return `$${(value / 1000000000000).toFixed(1)}T`;
+            } else if (value >= 1000000000) { // Billions
+              return `$${(value / 1000000000).toFixed(1)}B`;
+            } else if (value >= 1000000) { // Millions
+              return `$${(value / 1000000).toFixed(1)}M`;
+            } else if (value >= 1000) { // Thousands
+              return `$${(value / 1000).toFixed(1)}K`;
+            } else {
+              return `$${value.toFixed(2)}`;
+            }
+          };
+          
+          document.getElementById('marketCap').innerText = formatLargeNumber(data.market_cap);
+          document.getElementById('volume24h').innerText = formatLargeNumber(data.volume_24h);
+          
+          // Update third card based on coin type
+          const thirdCardLabel = document.getElementById('thirdCardLabel');
+          const thirdCardIcon = document.getElementById('thirdCardIcon');
+          const thirdCardValue = document.getElementById('btcDominance');
+          
+          if (data.symbol === 'BTC') {
+            thirdCardLabel.innerText = 'BTC Dominance';
+            thirdCardIcon.className = 'fa-brands fa-bitcoin text-crypto-teal';
+            thirdCardValue.innerText = `${parseFloat(data.btc_dominance).toFixed(1)}%`;
+          } else {
+            thirdCardLabel.innerText = 'Current Price';
+            thirdCardIcon.className = 'fa-solid fa-coins text-crypto-teal';
+            
+            // Format price appropriately
+            if (data.current_price >= 1000) {
+              thirdCardValue.innerText = `$${(data.current_price / 1000).toFixed(1)}k`;
+            } else if (data.current_price >= 1) {
+              thirdCardValue.innerText = `$${data.current_price.toFixed(2)}`;
+            } else {
+              thirdCardValue.innerText = `$${data.current_price.toFixed(4)}`;
+            }
+          }
+          
+          document.getElementById('fearGreed').innerText = data.fear_greed;
+          
+          // Update Fear & Greed display with dynamic colors and labels
+          const fearGreedValue = parseInt(data.fear_greed);
+          const fearGreedBar = document.getElementById('fearGreedBar');
+          const fearGreedLabel = document.getElementById('fearGreedLabel');
+          
+          // Set label and color based on value
+          let label = '';
+          let color = '';
+          if (fearGreedValue <= 25) {
+            label = 'Extreme Fear';
+            color = '#ef4444'; // red-500
+          } else if (fearGreedValue <= 45) {
+            label = 'Fear';
+            color = '#f97316'; // orange-500
+          } else if (fearGreedValue <= 55) {
+            label = 'Neutral';
+            color = '#eab308'; // yellow-500
+          } else if (fearGreedValue <= 75) {
+            label = 'Greed';
+            color = '#22c55e'; // green-500
+          } else {
+            label = 'Extreme Greed';
+            color = '#16a34a'; // green-600
+          }
+          
+          fearGreedLabel.innerText = label;
+          fearGreedBar.style.backgroundColor = color;
+          fearGreedBar.style.width = `${fearGreedValue}%`;
+          
+          // Update chart with current price for realistic data
+          document.getElementById('chartTitle').innerText = `${data.name} Price`;
+          
+          // Update current symbol, price and regenerate chart for current period
+          currentSymbol = data.symbol;
+          currentPrice = data.current_price;
+          generateRealisticChartData(data.symbol, currentPeriod);
+        })
+        .catch(error => {
+          console.error('Error fetching coin data:', error);
+        });
+    }
+
+    // Add click events to coin rows
+    attachCoinRowEventListeners();
+
+    // Context Menu for Watchlist
+    let contextMenuSymbol = '';
+    let contextMenuName = '';
+
+    function showWatchlistContextMenu(event, symbol, name) {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      contextMenuSymbol = symbol;
+      contextMenuName = name;
+      
+      const contextMenu = document.getElementById('watchlistContextMenu');
+      const coinNameElement = document.getElementById('contextMenuCoinName');
+      
+      // Set coin name in context menu
+      coinNameElement.textContent = name + ' (' + symbol + ')';
+      
+      // Show the context menu first to get its dimensions
+      contextMenu.classList.remove('hidden');
+      contextMenu.style.left = '0px';
+      contextMenu.style.top = '0px';
+      
+      // Get menu dimensions
+      const rect = contextMenu.getBoundingClientRect();
+      const menuWidth = rect.width;
+      const menuHeight = rect.height;
+      
+      // Position menu with cursor at top-left corner
+      let x = event.clientX;
+      let y = event.clientY;
+      
+      // Adjust position if menu goes off screen
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      
+      // Keep menu within screen bounds
+      if (x + menuWidth > windowWidth) {
+        x = event.clientX - menuWidth; // Show to the left of cursor
+      }
+      if (y + menuHeight > windowHeight) {
+        y = event.clientY - menuHeight; // Show above cursor
+      }
+      
+      // Ensure menu doesn't go off the left or top edges
+      if (x < 5) x = 5;
+      if (y < 5) y = 5;
+      
+      // Position the context menu
+      contextMenu.style.left = x + 'px';
+      contextMenu.style.top = y + 'px';
+    }
+
+    async function removeFromWatchlistContext() {
+      if (!contextMenuSymbol) return;
+      
+      try {
+        const response = await fetch('/watchlist/remove/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({ symbol: contextMenuSymbol })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          showNotification(data.message, 'success');
+          
+          // Update the star in the main table if visible
+          const starButton = document.querySelector(`button[data-symbol="${contextMenuSymbol}"]`);
+          if (starButton) {
+            starButton.innerHTML = '<i class="fa-regular fa-star"></i>';
+            starButton.classList.remove('text-crypto-teal');
+            starButton.classList.add('text-crypto-muted');
+          }
+          
+          // Refresh watchlist
+          refreshWatchlist();
+        } else {
+          const errorData = await response.json();
+          showNotification(errorData.error || 'Failed to remove coin', 'error');
+        }
+      } catch (error) {
+        console.error('Error removing coin from watchlist:', error);
+        showNotification('Error removing coin from watchlist', 'error');
+      } finally {
+        // Hide context menu
+        hideContextMenu();
+      }
+    }
+
+    function hideContextMenu() {
+      document.getElementById('watchlistContextMenu').classList.add('hidden');
+      contextMenuSymbol = '';
+      contextMenuName = '';
+    }
+
+    // Hide context menu when clicking anywhere else
+    document.addEventListener('click', function(event) {
+      const contextMenu = document.getElementById('watchlistContextMenu');
+      if (!contextMenu.contains(event.target)) {
+        hideContextMenu();
+      }
+    });
+
+    // Prevent context menu on non-watchlist items
+    document.addEventListener('contextmenu', function(event) {
+      if (!event.target.closest('.watchlist-item')) {
+        // Allow default context menu for non-watchlist items
+        return;
+      }
+    });
+
+    // Add to Watchlist Modal Functions
+    function toggleAddWatchlistModal() {
+      const modal = document.getElementById('addWatchlistModal');
+      const isHidden = modal.classList.contains('hidden');
+      
+      if (isHidden) {
+        modal.classList.remove('hidden');
+        document.getElementById('coinSearch').focus();
+        // Load all available coins initially
+        searchCoins('');
+      } else {
+        modal.classList.add('hidden');
+        document.getElementById('coinSearch').value = '';
+        document.getElementById('coinResults').innerHTML = '';
+      }
+    }
+
+    async function searchCoins(query) {
+      try {
+        const response = await fetch(`/coins/search/?q=${encodeURIComponent(query)}&watchlist_search=true`);
+        const data = await response.json();
+        
+        displayCoinResults(data.coins);
+      } catch (error) {
+        console.error('Error searching coins:', error);
+      }
+    }
+
+    function displayCoinResults(coins) {
+      const resultsContainer = document.getElementById('coinResults');
+      
+      if (coins.length === 0) {
+        resultsContainer.innerHTML = '<div class="text-crypto-muted text-sm p-2">No coins found</div>';
+        return;
+      }
+      
+      resultsContainer.innerHTML = coins.map(coin => `
+        <div class="flex items-center justify-between p-2 rounded hover:bg-crypto-gray cursor-pointer transition-colors"
+             onclick="addCoinFromModal('${coin.symbol}')">
+          <div class="flex items-center space-x-3">
+            <div class="w-6 h-6 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-full flex items-center justify-center">
+              <span class="text-white text-xs font-bold">${coin.symbol.slice(0, 2)}</span>
+            </div>
+            <div>
+              <div class="font-medium text-sm">${coin.name}</div>
+              <div class="text-xs text-crypto-muted">${coin.symbol}</div>
+            </div>
+          </div>
+          <div class="text-sm font-bold">
+            ${coin.current_price >= 1000 ? '$' + (coin.current_price / 1000).toFixed(1) + 'k' : 
+              coin.current_price >= 1 ? '$' + coin.current_price.toFixed(2) : 
+              '$' + coin.current_price.toFixed(4)}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function addCoinFromModal(symbol) {
+      try {
+        const response = await fetch('/api/toggle-watchlist/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({ symbol: symbol })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            showNotification(data.message, 'success');
+            
+            // Close modal and refresh
+            toggleAddWatchlistModal();
+            refreshWatchlist();
+            
+            // Update the star in the main table if visible
+            const starButton = document.querySelector(`button[data-symbol="${symbol}"]`);
+            if (starButton && data.is_watching) {
+              starButton.innerHTML = '<i class="fa-solid fa-star"></i>';
+              starButton.classList.remove('text-crypto-muted');
+              starButton.classList.add('text-crypto-teal');
+            }
+          } else {
+            showNotification(data.message || 'Error adding to watchlist', 'error');
+          }
+        } else {
+          const errorData = await response.json();
+          showNotification(errorData.error || 'Failed to add coin', 'error');
+        }
+      } catch (error) {
+        console.error('Error adding coin from modal:', error);
+        showNotification('Error adding coin to watchlist', 'error');
+      }
+    }
+
+    // Close modal when clicking outside
+    document.addEventListener('click', function(event) {
+      const modal = document.getElementById('addWatchlistModal');
+      const addBtn = document.getElementById('addToWatchlistBtn');
+      const coinSearch = document.getElementById('coinSearch');
+      
+      if (!modal.classList.contains('hidden') && 
+          !modal.contains(event.target) && 
+          !addBtn.contains(event.target) &&
+          event.target !== coinSearch) {
+        toggleAddWatchlistModal();
+      }
+    });
+
+    // Watchlist functionality
+    async function toggleWatchlist(symbol, buttonElement, event) {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      try {
+        const response = await fetch('/api/toggle-watchlist/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({ symbol: symbol })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            if (data.is_watching) {
+              // Added to watchlist
+              buttonElement.innerHTML = '<i class="fa-solid fa-star"></i>';
+              buttonElement.classList.remove('text-crypto-muted');
+              buttonElement.classList.add('text-crypto-teal');
+            } else {
+              // Removed from watchlist
+              buttonElement.innerHTML = '<i class="fa-regular fa-star"></i>';
+              buttonElement.classList.remove('text-crypto-teal');
+              buttonElement.classList.add('text-crypto-muted');
+            }
+            showNotification(data.message, 'success');
+            refreshWatchlist();
+          } else {
+            showNotification(data.message || 'Error updating watchlist', 'error');
+          }
+        }
+      } catch (error) {
+        console.error('Error toggling watchlist:', error);
+        showNotification('Error updating watchlist', 'error');
+      }
+    }
+
+    // Get CSRF token for Django
+    function getCsrfToken() {
+      return document.querySelector('meta[name="csrf-token"]')?.content || 
+             document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    }
+
+    // Show notification
+    function showNotification(message, type = 'success') {
+      // Create notification element
+      const notification = document.createElement('div');
+      notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg z-50 transition-all duration-300 transform translate-x-full`;
+      
+      if (type === 'success') {
+        notification.className += ' bg-green-600 text-white';
+      } else if (type === 'error') {
+        notification.className += ' bg-red-600 text-white';
+      } else if (type === 'info') {
+        notification.className += ' bg-blue-600 text-white';
+      } else {
+        notification.className += ' bg-gray-600 text-white';
+      }
+      
+      notification.textContent = message;
+      
+      document.body.appendChild(notification);
+      
+      // Show notification
+      setTimeout(() => notification.classList.remove('translate-x-full'), 100);
+      
+      // Hide notification after 3 seconds
+      setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
+
+    // Refresh watchlist display
+    async function refreshWatchlist() {
+      try {
+        // Fetch updated watchlist
+        const response = await fetch('/watchlist/api/');
+        const data = await response.json();
+        
+        // Update the watchlist display
+        updateWatchlistDisplay(data.watchlist);
+        
+        // Check if current coin is still in watchlist
+        const currentCoinSymbol = currentSymbol;
+        const isCurrentCoinInWatchlist = data.watchlist.some(item => 
+          (item.coin ? item.coin.symbol : item.symbol) === currentCoinSymbol
+        );
+        
+        if (!isCurrentCoinInWatchlist) {
+          // Current coin is no longer in watchlist, switch to next available
+          if (data.watchlist.length > 0) {
+            // Switch to first coin in watchlist
+            const nextCoin = data.watchlist[0].coin || data.watchlist[0];
+            updateDashboard(nextCoin.symbol);
+          } else {
+            // Watchlist is empty, fall back to Bitcoin or first available coin
+            try {
+              const coinsResponse = await fetch('/coins/search/?q=&limit=1');
+              const coinsData = await coinsResponse.json();
+              if (coinsData.coins && coinsData.coins.length > 0) {
+                updateDashboard(coinsData.coins[0].symbol);
+              }
+            } catch (error) {
+              console.error('Error fetching fallback coin:', error);
+              location.reload(); // Fallback to page reload
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error refreshing watchlist:', error);
+        // Fallback to page reload if API fails
+        setTimeout(() => location.reload(), 1000);
+      }
+    }
+    
+    // Update watchlist display in the UI
+    function updateWatchlistDisplay(watchlist) {
+      const watchlistContainer = document.querySelector('#watchlist .space-y-4');
+      
+      if (!watchlist || watchlist.length === 0) {
+        // Show empty state
+        watchlistContainer.innerHTML = `
+          <div class="text-center py-8 text-crypto-muted">
+            <i class="fa-regular fa-star text-4xl mb-4 opacity-50"></i>
+            <p class="text-lg mb-2">Your watchlist is empty</p>
+            <p class="text-sm">Click the star icon next to any coin to add it to your watchlist</p>
+          </div>
+        `;
+      } else {
+        // Show watchlist items
+        watchlistContainer.innerHTML = watchlist.map(item => {
+          const coin = item.coin || item;
+          return `
+            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-crypto-darker transition-colors cursor-pointer coin-row watchlist-item" 
+                 data-symbol="${coin.symbol}" 
+                 data-name="${coin.name}"
+                 oncontextmenu="showWatchlistContextMenu(event, '${coin.symbol}', '${coin.name}')">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-full flex items-center justify-center">
+                  <span class="text-white text-xs font-bold">${coin.symbol.slice(0, 2)}</span>
+                </div>
+                <div>
+                  <div class="font-medium">${coin.name}</div>
+                  <div class="text-sm text-crypto-muted">${coin.symbol}</div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="font-bold">$${coin.current_price.toFixed(2)}</div>
+                <div class="text-sm ${coin.price_change_24h >= 0 ? 'text-green-400' : 'text-red-400'}">
+                  ${coin.price_change_24h >= 0 ? '+' : ''}${coin.price_change_24h.toFixed(2)}%
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+        // Re-attach click event listeners to the new watchlist items
+        attachCoinRowEventListeners();
+      }
+    }
+
+    // Function to attach event listeners to coin rows
+    function attachCoinRowEventListeners() {
+      document.querySelectorAll('.coin-row').forEach(row => {
+        // Remove existing listeners to avoid duplicates
+        row.removeEventListener('click', handleCoinRowClick);
+        // Add new listener
+        row.addEventListener('click', handleCoinRowClick);
+      });
+    }
+
+    // Coin row click handler function
+    function handleCoinRowClick(e) {
+      // Don't trigger if clicking on the watchlist button or portfolio button
+      if (!e.target.closest('.watchlist-btn') && !e.target.closest('.portfolio-btn')) {
+        // Hide context menu if open
+        hideContextMenu();
+        updateDashboard(e.currentTarget.dataset.symbol);
+      }
+    }
+
+    // Quick add to portfolio function - now opens modal
+    async function quickAddToPortfolio(symbol, event) {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      // Check if user is authenticated
+      if (!isAuthenticated) {
+        showNotification('Please sign up or login to manage your portfolio', 'error');
+        return;
+      }
+      
+      // Open the portfolio modal with coin data
+      await openPortfolioModal(symbol);
+    }
+
+    // Portfolio modal functions
+    let currentPortfolioCoin = null;
+
+    async function openPortfolioModal(symbol) {
+      try {
+        // Fetch coin data
+        const response = await fetch(`/coin-data/${symbol}/`);
+        const coinData = await response.json();
+        
+        currentPortfolioCoin = coinData;
+        
+        // Update modal with coin information
+        document.getElementById('portfolioCoinSymbolIcon').textContent = coinData.symbol.slice(0, 2);
+        document.getElementById('portfolioCoinName').textContent = coinData.name;
+        document.getElementById('portfolioCoinSymbol').textContent = coinData.symbol;
+        document.getElementById('portfolioCoinSymbolText').textContent = coinData.symbol;
+        
+        // Format and display current price
+        let priceText;
+        if (coinData.current_price >= 1000) {
+          priceText = `$${(coinData.current_price / 1000).toFixed(1)}k`;
+        } else if (coinData.current_price >= 1) {
+          priceText = `$${coinData.current_price.toFixed(2)}`;
+        } else {
+          priceText = `$${coinData.current_price.toFixed(4)}`;
+        }
+        document.getElementById('portfolioCurrentPrice').textContent = priceText;
+        
+        // Clear previous input and total
+        document.getElementById('portfolioAmount').value = '';
+        document.getElementById('portfolioTotalValue').textContent = '$0.00';
+        
+        // Show modal
+        document.getElementById('portfolioModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        
+        // Focus on amount input
+        setTimeout(() => {
+          document.getElementById('portfolioAmount').focus();
+        }, 100);
+        
+      } catch (error) {
+        console.error('Error fetching coin data:', error);
+        showNotification('Error loading coin data', 'error');
+      }
+    }
+
+    function closePortfolioModal() {
+      document.getElementById('portfolioModal').classList.add('hidden');
+      document.body.style.overflow = 'auto';
+      currentPortfolioCoin = null;
+    }
+
+    async function confirmPortfolioAdd() {
+      const amount = parseFloat(document.getElementById('portfolioAmount').value);
+      
+      if (!amount || amount <= 0) {
+        showNotification('Please enter a valid amount', 'error');
+        return;
+      }
+      
+      if (!currentPortfolioCoin) {
+        showNotification('Error: No coin selected', 'error');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/portfolio/quick-add/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({
+            symbol: currentPortfolioCoin.symbol,
+            amount: amount
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showNotification(data.message, 'success');
+          closePortfolioModal();
+        } else {
+          showNotification(data.message, 'error');
+        }
+        
+      } catch (error) {
+        console.error('Error adding to portfolio:', error);
+        showNotification('Error adding to portfolio', 'error');
+      }
+    }
+
+    // Update total value when amount changes
+    document.addEventListener('DOMContentLoaded', function() {
+      const amountInput = document.getElementById('portfolioAmount');
+      const totalValueSpan = document.getElementById('portfolioTotalValue');
+      
+      if (amountInput) {
+        amountInput.addEventListener('input', function() {
+          const amount = parseFloat(this.value) || 0;
+          if (currentPortfolioCoin && amount > 0) {
+            const total = amount * currentPortfolioCoin.current_price;
+            if (total >= 1000000) {
+              totalValueSpan.textContent = `$${(total / 1000000).toFixed(2)}M`;
+            } else if (total >= 1000) {
+              totalValueSpan.textContent = `$${(total / 1000).toFixed(1)}K`;
+            } else {
+              totalValueSpan.textContent = `$${total.toFixed(2)}`;
+            }
+          } else {
+            totalValueSpan.textContent = '$0.00';
+          }
+        });
+      }
+    });
+
+    // Close modal with escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closePortfolioModal();
+      }
+    });
+
+    // Close modal when clicking outside
+    document.addEventListener('click', function(e) {
+      const portfolioModal = document.getElementById('portfolioModal');
+      if (e.target === portfolioModal) {
+        closePortfolioModal();
+      }
+    });
+
+    // Load watchlist status for all coins on page load
+    async function loadWatchlistStatus() {
+      const watchlistButtons = document.querySelectorAll('.watchlist-btn');
+      
+      for (const button of watchlistButtons) {
+        const symbol = button.dataset.symbol;
+        try {
+          const response = await fetch(`/watchlist/status/${symbol}/`);
+          const data = await response.json();
+          
+          if (data.in_watchlist) {
+            button.innerHTML = '<i class="fa-solid fa-star"></i>';
+            button.classList.remove('text-crypto-muted');
+            button.classList.add('text-crypto-teal');
+          }
+        } catch (error) {
+          console.error(`Error loading watchlist status for ${symbol}:`, error);
+        }
+      }
+    }
+
+    // Initialize watchlist status on page load
+    loadWatchlistStatus();
+
+    // Filter functionality
+    let currentFilter = 'all';
+    let currentOffset = 0;
+    let hasMoreData = false;
+    
+    // Sorting functionality
+    let currentSort = '';
+    let currentSortOrder = 'desc';
+    
+    // Add click handlers to filter buttons
+    document.querySelectorAll('.filter-btn').forEach(button => {
+      button.addEventListener('click', function() {
+        const filter = this.dataset.filter;
+        setActiveFilter(filter);
+        loadFilteredCoins(filter, true); // true = reset data
+      });
+    });
+
+    function sortTable(sortBy) {
+      // Toggle sort order if clicking the same column
+      if (currentSort === sortBy) {
+        currentSortOrder = currentSortOrder === 'desc' ? 'asc' : 'desc';
+      } else {
+        currentSort = sortBy;
+        currentSortOrder = 'desc'; // Default to descending for new column
+      }
+      
+      // Update sort indicators
+      updateSortIndicators(sortBy, currentSortOrder);
+      
+      // Load filtered coins with sorting
+      loadFilteredCoins(currentFilter, true);
+    }
+
+    function updateSortIndicators(sortBy, sortOrder) {
+      // Reset all sort indicators
+      document.querySelectorAll('[id^="sort-"]').forEach(icon => {
+        icon.className = 'fa-solid fa-sort text-xs opacity-50';
+      });
+      
+      // Update the active sort indicator
+      const activeIcon = document.getElementById(`sort-${sortBy}`);
+      if (activeIcon) {
+        if (sortOrder === 'asc') {
+          activeIcon.className = 'fa-solid fa-sort-up text-xs text-crypto-teal';
+        } else {
+          activeIcon.className = 'fa-solid fa-sort-down text-xs text-crypto-teal';
+        }
+      }
+    }
+
+    function setActiveFilter(filter) {
+      currentFilter = filter;
+      
+      // Update button styles
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        if (btn.dataset.filter === filter) {
+          // Active button
+          btn.className = 'filter-btn px-4 py-2 bg-crypto-teal text-white rounded-lg hover:bg-crypto-teal/80 transition-colors';
+        } else {
+          // Inactive button
+          btn.className = 'filter-btn px-4 py-2 text-crypto-muted hover:text-crypto-text hover:bg-crypto-gray transition-colors rounded-lg';
+        }
+      });
+    }
+
+    async function loadFilteredCoins(filter, reset = false) {
+      try {
+        if (reset) {
+          currentOffset = 0;
+        }
+        
+        // Build URL with sorting parameters
+        let url = `/coins/filter/?filter=${filter}&limit=20&offset=${currentOffset}`;
+        if (currentSort) {
+          url += `&sort_by=${currentSort}&sort_order=${currentSortOrder}`;
+        }
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.coins) {
+          if (reset) {
+            updateCoinsTable(data.coins);
+            const sortText = currentSort ? ` (sorted by ${currentSort})` : '';
+            showNotification(`Showing ${filter === 'all' ? 'all coins' : filter}${sortText}`, 'info');
+          } else {
+            appendCoinsToTable(data.coins);
+            showNotification(`Loaded ${data.coins.length} more coins`, 'info');
+          }
+          
+          // Update pagination state
+          currentOffset += data.coins.length;
+          hasMoreData = data.has_more;
+          updateShowMoreButton(data.has_more, data.loaded_count, data.total_count);
+        }
+      } catch (error) {
+        console.error('Error loading filtered coins:', error);
+        showNotification('Error loading filtered data', 'error');
+      }
+    }
+
+    function loadMoreCoins() {
+      loadFilteredCoins(currentFilter, false);
+    }
+
+    function updateShowMoreButton(hasMore, loadedCount, totalCount) {
+      const showMoreBtn = document.getElementById('showMoreBtn');
+      const showMoreText = document.getElementById('showMoreText');
+      
+      if (hasMore) {
+        showMoreBtn.classList.remove('hidden');
+        showMoreText.textContent = `Show More (${loadedCount}/${totalCount})`;
+      } else {
+        showMoreBtn.classList.add('hidden');
+      }
+    }
+
+    function updateCoinsTable(coins) {
+      const tableBody = document.querySelector('#topCoins tbody');
+      if (!tableBody) return;
+      
+      // Clear existing rows
+      tableBody.innerHTML = '';
+      
+      // Add new rows
+      coins.forEach((coin, index) => {
+        const row = document.createElement('tr');
+        row.className = 'coin-row border-b border-crypto-gray/30 hover:bg-crypto-gray/30 transition-colors';
+        
+        const priceFormatted = coin.current_price >= 1000 ? 
+          '$' + (coin.current_price / 1000).toFixed(1) + 'k' : 
+          coin.current_price >= 1 ? 
+          '$' + coin.current_price.toFixed(2) : 
+          '$' + coin.current_price.toFixed(4);
+          
+        const changeColor = coin.price_change_24h >= 0 ? 'text-green-500' : 'text-red-500';
+        const changeSign = coin.price_change_24h >= 0 ? '+' : '';
+        
+        const marketCapFormatted = coin.market_cap >= 1000000000 ? 
+          '$' + (coin.market_cap / 1000000000).toFixed(1) + 'B' : 
+          '$' + (coin.market_cap / 1000000).toFixed(1) + 'M';
+          
+        const volumeFormatted = coin.volume_24h >= 1000000000 ? 
+          '$' + (coin.volume_24h / 1000000000).toFixed(1) + 'B' : 
+          '$' + (coin.volume_24h / 1000000).toFixed(1) + 'M';
+        
+        row.innerHTML = `
+          <td class="py-4 px-2">${index + 1}</td>
+          <td class="py-4 px-2">
+            <div class="flex items-center space-x-3">
+              <div class="w-8 h-8 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-full flex items-center justify-center">
+                <span class="text-white text-xs font-bold">${coin.symbol.slice(0, 2)}</span>
+              </div>
+              <div>
+                <div class="font-medium">${coin.name}</div>
+                <div class="text-sm text-crypto-muted">${coin.symbol}</div>
+              </div>
+            </div>
+          </td>
+          <td class="py-4 px-2 font-bold">${priceFormatted}</td>
+          <td class="py-4 px-2 ${changeColor} font-medium">${changeSign}${coin.price_change_24h.toFixed(2)}%</td>
+          <td class="py-4 px-2 text-crypto-muted">${marketCapFormatted}</td>
+          <td class="py-4 px-2 text-crypto-muted">${volumeFormatted}</td>
+          <td class="py-4 px-2">
+            <button 
+              class="watchlist-btn hover:scale-110 transition-transform text-lg ${coin.in_watchlist ? 'text-crypto-teal' : 'text-crypto-muted'}"
+              data-symbol="${coin.symbol}"
+              onclick="toggleWatchlist('${coin.symbol}', this, event)"
+            >
+              <i class="fa-${coin.in_watchlist ? 'solid' : 'regular'} fa-star"></i>
+            </button>
+          </td>
+        `;
+        
+        tableBody.appendChild(row);
+      });
+    }
+
+    function appendCoinsToTable(coins) {
+      const tableBody = document.querySelector('#topCoins tbody');
+      if (!tableBody) return;
+      
+      // Add new rows to existing table
+      coins.forEach(coin => {
+        const row = document.createElement('tr');
+        row.className = 'coin-row border-b border-crypto-gray/30 hover:bg-crypto-gray/30 transition-colors';
+        
+        const priceFormatted = coin.current_price >= 1000 ? 
+          '$' + (coin.current_price / 1000).toFixed(1) + 'k' : 
+          coin.current_price >= 1 ? 
+          '$' + coin.current_price.toFixed(2) : 
+          '$' + coin.current_price.toFixed(4);
+          
+        const changeColor = coin.price_change_24h >= 0 ? 'text-green-500' : 'text-red-500';
+        const changeSign = coin.price_change_24h >= 0 ? '+' : '';
+        
+        const marketCapFormatted = coin.market_cap >= 1000000000 ? 
+          '$' + (coin.market_cap / 1000000000).toFixed(1) + 'B' : 
+          '$' + (coin.market_cap / 1000000).toFixed(1) + 'M';
+          
+        const volumeFormatted = coin.volume_24h >= 1000000000 ? 
+          '$' + (coin.volume_24h / 1000000000).toFixed(1) + 'B' : 
+          '$' + (coin.volume_24h / 1000000).toFixed(1) + 'M';
+        
+        // Get current row count for numbering
+        const currentRows = tableBody.querySelectorAll('tr').length;
+        
+        row.innerHTML = `
+          <td class="py-4 px-2">${currentRows + 1}</td>
+          <td class="py-4 px-2">
+            <div class="flex items-center space-x-3">
+              <div class="w-8 h-8 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-full flex items-center justify-center">
+                <span class="text-white text-xs font-bold">${coin.symbol.slice(0, 2)}</span>
+              </div>
+              <div>
+                <div class="font-medium">${coin.name}</div>
+                <div class="text-sm text-crypto-muted">${coin.symbol}</div>
+              </div>
+            </div>
+          </td>
+          <td class="py-4 px-2 font-bold">${priceFormatted}</td>
+          <td class="py-4 px-2 ${changeColor} font-medium">${changeSign}${coin.price_change_24h.toFixed(2)}%</td>
+          <td class="py-4 px-2 text-crypto-muted">${marketCapFormatted}</td>
+          <td class="py-4 px-2 text-crypto-muted">${volumeFormatted}</td>
+          <td class="py-4 px-2">
+            <div class="flex space-x-2">
+              <button 
+                class="watchlist-btn hover:scale-110 transition-transform ${coin.in_watchlist ? 'text-crypto-teal' : 'text-crypto-muted'}"
+                data-symbol="${coin.symbol}"
+                onclick="toggleWatchlist('${coin.symbol}', this, event)"
+                title="Add to Watchlist"
+              >
+                <i class="fa-${coin.in_watchlist ? 'solid' : 'regular'} fa-star"></i>
+              </button>
+              ${isAuthenticated ? `<button 
+                class="portfolio-btn hover:scale-110 transition-transform text-crypto-muted hover:text-crypto-orange"
+                data-symbol="${coin.symbol}"
+                onclick="quickAddToPortfolio('${coin.symbol}', event)"
+                title="Add to Portfolio"
+              >
+                <i class="fa-solid fa-plus"></i>
+              </button>` : ''}
+            </div>
+          </td>
+        `;
+        
+        tableBody.appendChild(row);
+      });
+    }
+
+    // Header Search Functionality
+    let searchTimeout;
+    const searchInput = document.getElementById('searchInput');
+    const searchDropdown = document.getElementById('searchDropdown');
+
+    searchInput.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      const query = this.value.trim();
+      
+      if (query.length === 0) {
+        hideSearchDropdown();
+        return;
+      }
+      
+      // Debounce search requests
+      searchTimeout = setTimeout(() => {
+        performHeaderSearch(query);
+      }, 300);
+    });
+
+    searchInput.addEventListener('focus', function() {
+      const query = this.value.trim();
+      if (query.length > 0) {
+        performHeaderSearch(query);
+      }
+    });
+
+    searchInput.addEventListener('blur', function() {
+      // Delay hiding to allow clicks on dropdown items
+      setTimeout(() => {
+        hideSearchDropdown();
+      }, 200);
+    });
+
+    searchInput.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        hideSearchDropdown();
+        this.blur();
+      }
+    });
+
+    async function performHeaderSearch(query) {
+      try {
+        const response = await fetch(`/coins/search/?q=${encodeURIComponent(query)}&limit=6`);
+        const data = await response.json();
+        
+        displayHeaderSearchResults(data.coins);
+      } catch (error) {
+        console.error('Error searching coins:', error);
+        hideSearchDropdown();
+      }
+    }
+
+    function displayHeaderSearchResults(coins) {
+      if (coins.length === 0) {
+        searchDropdown.innerHTML = `
+          <div class="p-4 text-center text-crypto-muted">
+            <i class="fa-solid fa-search text-2xl mb-2"></i>
+            <div class="text-sm">No coins found</div>
+          </div>
+        `;
+        showSearchDropdown();
+        return;
+      }
+      
+      const resultsHTML = coins.map(coin => `
+        <div class="flex items-center p-3 hover:bg-crypto-gray cursor-pointer transition-colors border-b border-crypto-gray/50 last:border-b-0"
+             onclick="navigateToCoin('${coin.symbol}')">
+          <div class="w-10 h-10 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-full flex items-center justify-center mr-3">
+            <span class="text-white text-sm font-bold">${coin.symbol.slice(0, 2)}</span>
+          </div>
+          <div class="flex-1">
+            <div class="font-medium text-sm text-crypto-text">${coin.name}</div>
+            <div class="text-xs text-crypto-muted">${coin.symbol}</div>
+          </div>
+          <div class="text-right">
+            <div class="font-bold text-sm ${coin.price_change_24h >= 0 ? 'text-green-500' : 'text-red-500'}">
+              ${coin.current_price >= 1000 ? '$' + (coin.current_price / 1000).toFixed(1) + 'k' : 
+                coin.current_price >= 1 ? '$' + coin.current_price.toFixed(2) : 
+                '$' + coin.current_price.toFixed(4)}
+            </div>
+            <div class="text-xs ${coin.price_change_24h >= 0 ? 'text-green-500' : 'text-red-500'}">
+              ${coin.price_change_24h >= 0 ? '+' : ''}${coin.price_change_24h.toFixed(2)}%
+            </div>
+          </div>
+        </div>
+      `).join('');
+      
+      // Add "View all results" link if there might be more
+      const viewAllHTML = coins.length >= 6 ? `
+        <div class="p-3 border-t border-crypto-gray/50 bg-crypto-gray/30">
+          <div class="text-center">
+            <button onclick="performFullSearch()" class="text-crypto-teal hover:text-crypto-teal/80 text-sm font-medium">
+              <i class="fa-solid fa-search mr-1"></i>
+              View all search results
+            </button>
+          </div>
+        </div>
+      ` : '';
+      
+      searchDropdown.innerHTML = resultsHTML + viewAllHTML;
+      showSearchDropdown();
+    }
+
+    function navigateToCoin(symbol) {
+      window.location.href = `/coin/${symbol}/`;
+    }
+
+    function performFullSearch() {
+      const query = searchInput.value.trim();
+      if (query) {
+        // In a full implementation, this could navigate to a dedicated search results page
+        // For now, we'll show a notification
+        showNotification(`Full search for "${query}" - feature coming soon!`, 'info');
+      }
+      hideSearchDropdown();
+    }
+
+    function showSearchDropdown() {
+      searchDropdown.classList.remove('hidden');
+    }
+
+    function hideSearchDropdown() {
+      searchDropdown.classList.add('hidden');
+    }
+
+    // Hide search dropdown when clicking elsewhere
+    document.addEventListener('click', function(event) {
+      const searchContainer = document.getElementById('searchContainer');
+      if (!searchContainer.contains(event.target)) {
+        hideSearchDropdown();
+      }
+    });
+
+    // Initialize the page - check if we need to show "Show More" button for current data
+    document.addEventListener('DOMContentLoaded', function() {
+      // Fix initial number formatting
+      formatInitialNumbers();
+      // Check if there are more coins available for the default "all" filter
+      checkShowMoreButton();
+      // Initialize watchlist star states
+      initializeWatchlistStars();
+      // Initialize Fear & Greed display
+      initializeFearGreedDisplay();
+    });
+
+    // Format initial numbers on page load
+    function formatInitialNumbers() {
+      const formatLargeNumber = (value) => {
+        if (value >= 1000000000000) { // Trillions
+          return `$${(value / 1000000000000).toFixed(1)}T`;
+        } else if (value >= 1000000000) { // Billions
+          return `$${(value / 1000000000).toFixed(1)}B`;
+        } else if (value >= 1000000) { // Millions
+          return `$${(value / 1000000).toFixed(1)}M`;
+        } else if (value >= 1000) { // Thousands
+          return `$${(value / 1000).toFixed(1)}K`;
+        } else {
+          return `$${value.toFixed(2)}`;
+        }
+      };
+
+      // Get the raw values from Django context and format market overview cards
+      const marketCapValue = {{ selected_coin.market_cap }};
+      const volumeValue = {{ selected_coin.volume_24h }};
+      
+      // Update the displayed values in market overview
+      document.getElementById('marketCap').innerText = formatLargeNumber(marketCapValue);
+      document.getElementById('volume24h').innerText = formatLargeNumber(volumeValue);
+      
+      // Format the third card based on selected coin
+      const selectedCoinSymbol = '{{ selected_coin.symbol }}';
+      const thirdCardLabel = document.getElementById('thirdCardLabel');
+      const thirdCardIcon = document.getElementById('thirdCardIcon');
+      const thirdCardValue = document.getElementById('btcDominance');
+      
+      if (selectedCoinSymbol === 'BTC') {
+        thirdCardLabel.innerText = 'BTC Dominance';
+        thirdCardIcon.className = 'fa-brands fa-bitcoin text-crypto-teal';
+        const btcDominanceValue = {{ selected_coin.btc_dominance }};
+        thirdCardValue.innerText = `${parseFloat(btcDominanceValue).toFixed(1)}%`;
+      } else {
+        thirdCardLabel.innerText = 'Current Price';
+        thirdCardIcon.className = 'fa-solid fa-coins text-crypto-teal';
+        const currentPriceValue = {{ selected_coin.current_price }};
+        
+        // Format price appropriately
+        if (currentPriceValue >= 1000) {
+          thirdCardValue.innerText = `$${(currentPriceValue / 1000).toFixed(1)}k`;
+        } else if (currentPriceValue >= 1) {
+          thirdCardValue.innerText = `$${currentPriceValue.toFixed(2)}`;
+        } else {
+          thirdCardValue.innerText = `$${currentPriceValue.toFixed(4)}`;
+        }
+      }
+      
+      // Format values in the top cryptocurrencies table
+      const tableRows = document.querySelectorAll('#topCoins tbody tr');
+      tableRows.forEach(row => {
+        const marketCapCell = row.cells[4]; // Market cap column
+        const volumeCell = row.cells[5]; // Volume column
+        
+        if (marketCapCell && volumeCell) {
+          // Extract numeric values from the text content
+          const marketCapText = marketCapCell.textContent.trim();
+          const volumeText = volumeCell.textContent.trim();
+          
+          // Remove $ sign and parse the number
+          const marketCapNum = parseFloat(marketCapText.replace('$', '').replace(/,/g, ''));
+          const volumeNum = parseFloat(volumeText.replace('$', '').replace(/,/g, ''));
+          
+          if (!isNaN(marketCapNum)) {
+            marketCapCell.textContent = formatLargeNumber(marketCapNum);
+          }
+          if (!isNaN(volumeNum)) {
+            volumeCell.textContent = formatLargeNumber(volumeNum);
+          }
+        }
+      });
+    }
+
+    // Initialize Fear & Greed display on page load
+    function initializeFearGreedDisplay() {
+      const fearGreedValue = parseInt(document.getElementById('fearGreed').innerText);
+      const fearGreedBar = document.getElementById('fearGreedBar');
+      const fearGreedLabel = document.getElementById('fearGreedLabel');
+      
+      // Set label and color based on value
+      let label = '';
+      let color = '';
+      if (fearGreedValue <= 25) {
+        label = 'Extreme Fear';
+        color = '#ef4444'; // red-500
+      } else if (fearGreedValue <= 45) {
+        label = 'Fear';
+        color = '#f97316'; // orange-500
+      } else if (fearGreedValue <= 55) {
+        label = 'Neutral';
+        color = '#eab308'; // yellow-500
+      } else if (fearGreedValue <= 75) {
+        label = 'Greed';
+        color = '#22c55e'; // green-500
+      } else {
+        label = 'Extreme Greed';
+        color = '#16a34a'; // green-600
+      }
+      
+      fearGreedLabel.innerText = label;
+      fearGreedBar.style.backgroundColor = color;
+      fearGreedBar.style.width = `${fearGreedValue}%`;
+    }
+
+    // Initialize watchlist star states on page load
+    async function initializeWatchlistStars() {
+      const starButtons = document.querySelectorAll('[onclick*="toggleWatchlist"]');
+      
+      for (const button of starButtons) {
+        // Extract symbol from the onclick attribute
+        const onclick = button.getAttribute('onclick');
+        const symbolMatch = onclick.match(/toggleWatchlist\(['"]([^'"]+)['"]/);
+        
+        if (symbolMatch) {
+          const symbol = symbolMatch[1];
+          
+          try {
+            const response = await fetch(`/watchlist/status/${symbol}/`);
+            const data = await response.json();
+            
+            if (data.in_watchlist) {
+              // Show as favorited (filled star)
+              button.innerHTML = '<i class="fa-solid fa-star"></i>';
+              button.classList.remove('text-crypto-muted');
+              button.classList.add('text-crypto-teal');
+            } else {
+              // Show as not favorited (empty star)
+              button.innerHTML = '<i class="fa-regular fa-star"></i>';
+              button.classList.remove('text-crypto-teal');
+              button.classList.add('text-crypto-muted');
+            }
+          } catch (error) {
+            console.error(`Error checking watchlist status for ${symbol}:`, error);
+          }
+        }
+      }
+    }
+
+    async function checkShowMoreButton() {
+      console.log('Checking for show more button...'); // Debug log
+      try {
+        const response = await fetch('/coins/filter/?filter=all&limit=20&offset=10');
+        const data = await response.json();
+        console.log('API response:', data); // Debug log
+        
+        if (data.coins && data.coins.length > 0) {
+          // There are more coins available
+          console.log('Show more button should be visible'); // Debug log
+          updateShowMoreButton(true, 10, data.total_count);
+          // Update pagination state
+          currentOffset = 10; // We already have 10 coins loaded from Django template
+          hasMoreData = true;
+        }
+      } catch (error) {
+        console.error('Error checking for more data:', error);
+      }
+    }
+
+    // User dropdown functionality for authenticated users
+    document.addEventListener('DOMContentLoaded', function() {
+      const userDropdownBtn = document.getElementById('userDropdownBtn');
+      const userDropdownMenu = document.getElementById('userDropdownMenu');
+      
+      if (userDropdownBtn && userDropdownMenu) {
+        userDropdownBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          userDropdownMenu.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+          if (!userDropdownBtn.contains(e.target) && !userDropdownMenu.contains(e.target)) {
+            userDropdownMenu.classList.add('hidden');
+          }
+        });
+      }
+    });
+  </script>
+
+</body>
+</html>

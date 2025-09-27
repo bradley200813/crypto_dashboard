@@ -1,0 +1,164 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CryptoTracker — Login</title>
+  
+  <!-- CSRF Token for AJAX requests -->
+  <meta name="csrf-token" content="{{ csrf_token }}">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome (icons) -->
+  <script>
+    window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --crypto-dark: #0f1419;
+      --crypto-darker: #0a0e13;
+      --crypto-gray: #1a1f26;
+      --crypto-teal: #14b8a6;
+      --crypto-orange: #f97316;
+      --crypto-text: #e2e8f0;
+      --crypto-muted: #64748b;
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:var(--crypto-dark);
+      color:var(--crypto-text);
+    }
+    
+    .gradient-border {
+      background: linear-gradient(135deg, var(--crypto-teal), var(--crypto-orange));
+      padding: 2px;
+      border-radius: 12px;
+    }
+    
+    .gradient-border-inner {
+      background: var(--crypto-gray);
+      border-radius: 10px;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'crypto-dark': '#0f1419',
+            'crypto-darker': '#0a0e13',
+            'crypto-gray': '#1a1f26',
+            'crypto-teal': '#14b8a6',
+            'crypto-orange': '#f97316',
+            'crypto-text': '#e2e8f0',
+            'crypto-muted': '#64748b'
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="min-h-screen bg-crypto-dark">
+  <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+      <!-- Header -->
+      <div class="text-center">
+        <div class="mx-auto h-16 w-16 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-full flex items-center justify-center mb-6">
+          <i class="fa-solid fa-chart-line text-white text-2xl"></i>
+        </div>
+        <h2 class="text-3xl font-bold">Sign in to CryptoTracker</h2>
+        <p class="mt-2 text-crypto-muted">Track your crypto portfolio with ease</p>
+      </div>
+
+      <!-- Login Form -->
+      <div class="gradient-border">
+        <div class="gradient-border-inner p-8">
+          <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Display any messages -->
+            {% if messages %}
+              {% for message in messages %}
+                <div class="bg-crypto-orange/10 border border-crypto-orange/30 text-crypto-orange px-4 py-3 rounded-lg text-sm">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            {% endif %}
+            
+            <!-- Display form errors -->
+            {% if form.errors %}
+              {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                  <div class="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm">
+                    {% if field == '__all__' %}{{ error }}{% else %}{{ field|title }}: {{ error }}{% endif %}
+                  </div>
+                {% endfor %}
+              {% endfor %}
+            {% endif %}
+            
+            <div>
+              <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium mb-2">
+                Username
+              </label>
+              <input 
+                type="text" 
+                name="{{ form.username.name }}" 
+                id="{{ form.username.id_for_label }}" 
+                class="w-full bg-crypto-darker border border-crypto-muted/20 rounded-lg px-4 py-3 focus:outline-none focus:border-crypto-teal transition-colors" 
+                placeholder="Enter your username"
+                required
+              />
+            </div>
+            
+            <div>
+              <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium mb-2">
+                Password
+              </label>
+              <input 
+                type="password" 
+                name="{{ form.password.name }}" 
+                id="{{ form.password.id_for_label }}" 
+                class="w-full bg-crypto-darker border border-crypto-muted/20 rounded-lg px-4 py-3 focus:outline-none focus:border-crypto-teal transition-colors" 
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+            
+            <button 
+              type="submit" 
+              class="w-full bg-gradient-to-r from-crypto-teal to-crypto-orange hover:from-crypto-teal/80 hover:to-crypto-orange/80 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02]"
+            >
+              Sign In
+            </button>
+          </form>
+          
+          <div class="text-center mt-6 pt-6 border-t border-crypto-muted/20">
+            <p class="text-crypto-muted">
+              Don't have an account? 
+              <a href="{% url 'users:register' %}" class="text-crypto-teal hover:text-crypto-teal/80 font-medium">
+                Sign up here
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

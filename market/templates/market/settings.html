@@ -1,0 +1,503 @@
+{% extends "market/base.html" %}
+
+{% block title %}Settings — CryptoTracker Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+  <!-- Page Header -->
+  <div>
+    <h1 class="text-3xl font-bold text-crypto-text">Settings</h1>
+    <p class="text-crypto-muted mt-2">Manage your account preferences and dashboard configuration</p>
+  </div>
+
+  {% if user.is_authenticated %}
+  <!-- Account Overview -->
+  <div class="bg-crypto-gray rounded-xl p-6">
+    <h2 class="text-xl font-bold text-crypto-text mb-4 flex items-center">
+      <i class="fa-solid fa-user-circle text-crypto-teal mr-3"></i>
+      Account Overview
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="text-center">
+        <div class="text-2xl font-bold text-crypto-teal">{{ portfolio_count|default:0 }}</div>
+        <div class="text-sm text-crypto-muted">Portfolio Holdings</div>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl font-bold text-crypto-orange">{{ watchlist_count|default:0 }}</div>
+        <div class="text-sm text-crypto-muted">Watchlist Items</div>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl font-bold text-crypto-text">{{ transaction_count|default:0 }}</div>
+        <div class="text-sm text-crypto-muted">Total Transactions</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Display Preferences -->
+    <div class="bg-crypto-gray rounded-xl p-6">
+      <h2 class="text-xl font-bold text-crypto-text mb-6 flex items-center">
+        <i class="fa-solid fa-palette text-crypto-teal mr-3"></i>
+        Display Preferences
+      </h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-crypto-text mb-2">Theme</label>
+          <select class="w-full bg-crypto-darker border border-crypto-muted/20 rounded-lg px-4 py-2 text-crypto-text focus:outline-none focus:border-crypto-teal">
+            <option value="dark">Dark (Current)</option>
+            <option value="light" disabled>Light (Coming Soon)</option>
+            <option value="auto" disabled>Auto (Coming Soon)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-crypto-text mb-2">Currency</label>
+          <select class="w-full bg-crypto-darker border border-crypto-muted/20 rounded-lg px-4 py-2 text-crypto-text focus:outline-none focus:border-crypto-teal">
+            <option value="usd">USD ($)</option>
+            <option value="eur" disabled>EUR (€) - Coming Soon</option>
+            <option value="gbp" disabled>GBP (£) - Coming Soon</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-crypto-text mb-2">Default Chart Period</label>
+          <select class="w-full bg-crypto-darker border border-crypto-muted/20 rounded-lg px-4 py-2 text-crypto-text focus:outline-none focus:border-crypto-teal">
+            <option value="1h">1 Hour</option>
+            <option value="24h">24 Hours</option>
+            <option value="7d" selected>7 Days</option>
+            <option value="30d">30 Days</option>
+          </select>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-sm font-medium text-crypto-text">Compact View</div>
+            <div class="text-xs text-crypto-muted">Show more data in less space</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" class="sr-only peer">
+            <div class="w-11 h-6 bg-crypto-darker rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-crypto-teal"></div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="bg-crypto-gray rounded-xl p-6">
+      <h2 class="text-xl font-bold text-crypto-text mb-6 flex items-center">
+        <i class="fa-solid fa-bell text-crypto-orange mr-3"></i>
+        Notifications
+      </h2>
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-sm font-medium text-crypto-text">Price Alerts</div>
+            <div class="text-xs text-crypto-muted">Get notified when prices change significantly</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" class="sr-only peer" checked>
+            <div class="w-11 h-6 bg-crypto-darker rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-crypto-teal"></div>
+          </label>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-sm font-medium text-crypto-text">News Updates</div>
+            <div class="text-xs text-crypto-muted">Breaking crypto news and analysis</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" class="sr-only peer" checked>
+            <div class="w-11 h-6 bg-crypto-darker rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-crypto-teal"></div>
+          </label>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-sm font-medium text-crypto-text">Portfolio Changes</div>
+            <div class="text-xs text-crypto-muted">Updates on your portfolio performance</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" class="sr-only peer">
+            <div class="w-11 h-6 bg-crypto-darker rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-crypto-teal"></div>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Configuration -->
+  <div class="bg-crypto-gray rounded-xl p-6">
+    <h2 class="text-xl font-bold text-crypto-text mb-6 flex items-center">
+      <i class="fa-solid fa-plug text-crypto-teal mr-3"></i>
+      API Configuration
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-sm font-medium text-crypto-text mb-2">NewsAPI Status</label>
+        <div class="flex items-center space-x-3">
+          {% if has_news_api_key %}
+            <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+            <span class="text-sm text-crypto-text">Connected</span>
+            <span class="text-xs text-crypto-muted">({{ news_api_key_partial }})</span>
+          {% else %}
+            <div class="w-3 h-3 bg-red-400 rounded-full"></div>
+            <span class="text-sm text-crypto-text">Not Configured</span>
+          {% endif %}
+        </div>
+        {% if not has_news_api_key %}
+        <p class="text-xs text-crypto-muted mt-2">
+          Get a free API key from <a href="https://newsapi.org" target="_blank" class="text-crypto-teal hover:underline">NewsAPI.org</a> 
+          to access real crypto news
+        </p>
+        {% endif %}
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-crypto-text mb-2">Market Data</label>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div id="dataStatusIndicator" class="w-3 h-3 bg-gray-400 rounded-full"></div>
+            <span class="text-sm text-crypto-text">CoinGecko API</span>
+            <span id="dataLastUpdate" class="text-xs text-crypto-muted"></span>
+          </div>
+          {% if user.is_staff %}
+          <button 
+            id="updateDataBtn" 
+            class="px-3 py-1 bg-crypto-teal text-white text-xs rounded hover:bg-crypto-teal/80 transition-colors"
+            onclick="updateCryptoData()"
+          >
+            Update Now
+          </button>
+          {% endif %}
+        </div>
+        <p class="text-xs text-crypto-muted mt-2" id="dataStatusText">Real-time cryptocurrency prices and market data</p>
+      </div>
+    </div>
+  </div>
+
+  {% if user.is_authenticated %}
+  <!-- Data Management -->
+  <div class="bg-crypto-gray rounded-xl p-6">
+    <h2 class="text-xl font-bold text-crypto-text mb-6 flex items-center">
+      <i class="fa-solid fa-database text-crypto-orange mr-3"></i>
+      Data Management
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <h3 class="font-medium text-crypto-text mb-2">Clear Watchlist</h3>
+        <p class="text-sm text-crypto-muted mb-4">Remove all items from your watchlist. This cannot be undone.</p>
+        <button 
+          onclick="confirmClearData('watchlist')" 
+          class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          <i class="fa-solid fa-trash mr-2"></i>
+          Clear Watchlist
+        </button>
+      </div>
+      <div>
+        <h3 class="font-medium text-crypto-text mb-2">Clear Portfolio</h3>
+        <p class="text-sm text-crypto-muted mb-4">Remove all portfolio holdings and transaction history. This cannot be undone.</p>
+        <button 
+          onclick="confirmClearData('portfolio')" 
+          class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          <i class="fa-solid fa-trash mr-2"></i>
+          Clear Portfolio
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Account Actions -->
+  <div class="bg-crypto-gray rounded-xl p-6">
+    <h2 class="text-xl font-bold text-crypto-text mb-6 flex items-center">
+      <i class="fa-solid fa-user-gear text-crypto-teal mr-3"></i>
+      Account Actions
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <h3 class="font-medium text-crypto-text mb-2">Export Data</h3>
+        <p class="text-sm text-crypto-muted mb-4">Download your portfolio and watchlist data as JSON</p>
+        <button 
+          onclick="exportUserData()" 
+          class="px-4 py-2 bg-crypto-teal hover:bg-crypto-teal/80 text-white rounded-lg text-sm font-medium transition-colors"
+          disabled
+        >
+          <i class="fa-solid fa-download mr-2"></i>
+          Export Data (Coming Soon)
+        </button>
+      </div>
+      <div>
+        <h3 class="font-medium text-crypto-text mb-2">Account Settings</h3>
+        <p class="text-sm text-crypto-muted mb-4">Manage your profile, password, and account preferences</p>
+        <a 
+          href="{% url 'users:profile' %}" 
+          class="inline-block px-4 py-2 bg-crypto-orange hover:bg-crypto-orange/80 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          <i class="fa-solid fa-user-cog mr-2"></i>
+          Manage Account
+        </a>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <!-- Guest User Message -->
+  <div class="bg-crypto-gray rounded-xl p-6 text-center">
+    <div class="w-16 h-16 bg-crypto-teal/10 rounded-full flex items-center justify-center mx-auto mb-4">
+      <i class="fa-solid fa-user-plus text-crypto-teal text-2xl"></i>
+    </div>
+    <h3 class="text-lg font-bold text-crypto-text mb-2">Create an Account for More Features</h3>
+    <p class="text-crypto-muted mb-6">Sign up to save your preferences, manage portfolio data, and access advanced settings</p>
+    <div class="flex justify-center space-x-4">
+      <a 
+        href="{% url 'users:register' %}" 
+        class="px-6 py-3 bg-gradient-to-r from-crypto-teal to-crypto-orange hover:from-crypto-teal/80 hover:to-crypto-orange/80 text-white font-medium rounded-lg transition-all"
+      >
+        Sign Up Free
+      </a>
+      <a 
+        href="{% url 'users:login' %}" 
+        class="px-6 py-3 bg-crypto-darker hover:bg-crypto-muted/20 text-crypto-text border border-crypto-muted/20 font-medium rounded-lg transition-colors"
+      >
+        Login
+      </a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-crypto-darker rounded-2xl p-8 w-full max-w-md border border-crypto-gray/30">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-xl font-bold text-crypto-text">Confirm Action</h2>
+      <button onclick="closeConfirmModal()" class="text-crypto-muted hover:text-crypto-text">
+        <i class="fa-solid fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="mb-6">
+      <div class="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fa-solid fa-exclamation-triangle text-red-400 text-2xl"></i>
+      </div>
+      <p id="confirmMessage" class="text-center text-crypto-muted mb-4">
+        Are you sure you want to perform this action? This cannot be undone.
+      </p>
+    </div>
+    
+    <div class="flex space-x-3">
+      <button 
+        type="button" 
+        onclick="closeConfirmModal()" 
+        class="flex-1 bg-crypto-gray hover:bg-crypto-muted/20 text-crypto-text py-3 rounded-lg font-medium transition-colors"
+      >
+        Cancel
+      </button>
+      <button 
+        type="button" 
+        onclick="executeDataClear()" 
+        id="confirmButton"
+        class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-medium transition-all"
+      >
+        <i class="fa-solid fa-trash mr-2"></i>
+        Confirm
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let pendingAction = null;
+
+  function confirmClearData(type) {
+    pendingAction = type;
+    const modal = document.getElementById('confirmModal');
+    const message = document.getElementById('confirmMessage');
+    
+    if (type === 'watchlist') {
+      message.textContent = 'Are you sure you want to clear your entire watchlist? All saved coins will be removed and this action cannot be undone.';
+    } else if (type === 'portfolio') {
+      message.textContent = 'Are you sure you want to clear your entire portfolio? All holdings and transaction history will be permanently deleted.';
+    }
+    
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    modal.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+    pendingAction = null;
+  }
+
+  async function executeDataClear() {
+    if (!pendingAction) return;
+    
+    const button = document.getElementById('confirmButton');
+    const originalText = button.innerHTML;
+    
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Processing...';
+    button.disabled = true;
+    
+    try {
+      const response = await fetch('/api/settings/update/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+          type: `clear_${pendingAction}`
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        showNotification(data.message, 'success');
+        closeConfirmModal();
+        
+        // Refresh the page after a short delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        showNotification(data.message, 'error');
+      }
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      showNotification('Error performing action. Please try again.', 'error');
+    } finally {
+      button.innerHTML = originalText;
+      button.disabled = false;
+    }
+  }
+
+  function exportUserData() {
+    showNotification('Export functionality coming soon!', 'info');
+  }
+
+  // Get CSRF token for Django
+  function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.content || 
+           document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+  }
+
+  // Show notification
+  function showNotification(message, type = 'success') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg z-50 transition-all duration-300 transform translate-x-full`;
+    
+    if (type === 'success') {
+      notification.className += ' bg-green-600 text-white';
+    } else if (type === 'error') {
+      notification.className += ' bg-red-600 text-white';
+    } else if (type === 'info') {
+      notification.className += ' bg-blue-600 text-white';
+    } else {
+      notification.className += ' bg-gray-600 text-white';
+    }
+    
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // Show notification
+    setTimeout(() => notification.classList.remove('translate-x-full'), 100);
+    
+    // Hide notification after 3 seconds
+    setTimeout(() => {
+      notification.classList.add('translate-x-full');
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
+  }
+
+  // Close modal with escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeConfirmModal();
+    }
+  });
+
+  // Close modal when clicking outside
+  document.addEventListener('click', function(e) {
+    const modal = document.getElementById('confirmModal');
+    if (e.target === modal) {
+      closeConfirmModal();
+    }
+  });
+
+  // Data update functions
+  async function checkDataStatus() {
+    try {
+      const response = await fetch('/api/data/status/');
+      const data = await response.json();
+      
+      if (data.success) {
+        const indicator = document.getElementById('dataStatusIndicator');
+        const lastUpdate = document.getElementById('dataLastUpdate');
+        const statusText = document.getElementById('dataStatusText');
+        
+        // Update indicator color based on freshness
+        if (data.is_fresh) {
+          indicator.className = 'w-3 h-3 bg-green-400 rounded-full';
+          statusText.textContent = 'Data is fresh and up-to-date';
+        } else {
+          indicator.className = 'w-3 h-3 bg-yellow-400 rounded-full';
+          statusText.textContent = 'Data may be outdated';
+        }
+        
+        // Update last update time
+        if (data.last_update) {
+          const updateTime = new Date(data.last_update);
+          lastUpdate.textContent = `Last updated: ${updateTime.toLocaleTimeString()}`;
+        } else {
+          lastUpdate.textContent = 'Never updated';
+        }
+      }
+    } catch (error) {
+      console.error('Error checking data status:', error);
+      document.getElementById('dataStatusIndicator').className = 'w-3 h-3 bg-red-400 rounded-full';
+      document.getElementById('dataStatusText').textContent = 'Error checking data status';
+    }
+  }
+
+  async function updateCryptoData() {
+    const button = document.getElementById('updateDataBtn');
+    const originalText = button.textContent;
+    
+    button.disabled = true;
+    button.textContent = 'Updating...';
+    
+    try {
+      const response = await fetch('/api/data/update/', {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrfToken(),
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        showNotification(`Successfully updated ${data.updated_count} cryptocurrencies`, 'success');
+        checkDataStatus(); // Refresh status
+      } else {
+        showNotification(`Update failed: ${data.message}`, 'error');
+      }
+    } catch (error) {
+      console.error('Error updating crypto data:', error);
+      showNotification('Error updating cryptocurrency data', 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  }
+
+  // Check data status on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    checkDataStatus();
+    
+    // Check data status every 5 minutes
+    setInterval(checkDataStatus, 5 * 60 * 1000);
+  });
+</script>
+{% endblock %}

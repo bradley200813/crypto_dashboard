@@ -1,0 +1,1099 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Portfolio — CryptoTracker Dashboard</title>
+  
+  <!-- CSRF Token for AJAX requests -->
+  <meta name="csrf-token" content="{{ csrf_token }}">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Highcharts for charts -->
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+
+  <!-- Font Awesome (icons) -->
+  <script>
+    window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --crypto-dark: #0f1419;
+      --crypto-darker: #0a0e13;
+      --crypto-gray: #1a1f26;
+      --crypto-teal: #14b8a6;
+      --crypto-orange: #f97316;
+      --crypto-text: #e2e8f0;
+      --crypto-muted: #64748b;
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:var(--crypto-dark);
+      color:var(--crypto-text);
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    ::-webkit-scrollbar{ display:none; }
+
+    .sidebar-expanded { width: 280px; }
+    .sidebar-collapsed { width: 80px; }
+    .sidebar-text { transition: opacity 0.3s ease; }
+    .sidebar-collapsed .sidebar-text { opacity: 0; }
+
+    /* Modal and notification styling */
+    .fade-in {
+      opacity: 0;
+      animation: fadeIn 0.5s ease-in-out forwards;
+    }
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+  </style>
+
+  <script>
+    /* Tailwind config extension for this static file (optional) */
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'crypto-dark': '#0f1419',
+            'crypto-darker': '#0a0e13',
+            'crypto-gray': '#1a1f26',
+            'crypto-teal': '#14b8a6',
+            'crypto-orange': '#f97316',
+            'crypto-text': '#e2e8f0',
+            'crypto-muted': '#64748b'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-crypto-dark text-crypto-text">
+
+  <!-- Sidebar -->
+  <div id="sidebar" class="fixed left-0 top-0 h-full bg-crypto-darker border-r border-crypto-gray sidebar-expanded z-50 transition-all duration-300">
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-lg flex items-center justify-center">
+            <i class="fa-solid fa-coins text-white text-sm"></i>
+          </div>
+          <span class="font-bold text-xl sidebar-text">CryptoTracker</span>
+        </div>
+        <button id="sidebarToggle" class="text-crypto-muted hover:text-crypto-text transition-colors">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+
+      <nav class="space-y-2">
+        <a href="{% url 'market:dashboard' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-crypto-muted hover:text-crypto-text hover:bg-crypto-gray transition-all cursor-pointer">
+          <i class="fa-solid fa-chart-line w-5"></i>
+          <span class="sidebar-text">Dashboard</span>
+        </a>
+        <a href="{% url 'market:watchlist' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-crypto-muted hover:text-crypto-text hover:bg-crypto-gray transition-all cursor-pointer">
+          <i class="fa-solid fa-star w-5"></i>
+          <span class="sidebar-text">Watchlist</span>
+        </a>
+        <a href="{% url 'market:news' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-crypto-muted hover:text-crypto-text hover:bg-crypto-gray transition-all cursor-pointer">
+          <i class="fa-solid fa-newspaper w-5"></i>
+          <span class="sidebar-text">News</span>
+        </a>
+        <a href="{% url 'market:portfolio' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg bg-crypto-teal/10 text-crypto-teal cursor-pointer">
+          <i class="fa-solid fa-briefcase w-5"></i>
+          <span class="sidebar-text">Portfolio</span>
+        </a>
+        <span class="flex items-center space-x-3 px-4 py-3 rounded-lg text-crypto-muted hover:text-crypto-text hover:bg-crypto-gray transition-all cursor-pointer">
+          <i class="fa-solid fa-cog w-5"></i>
+          <span class="sidebar-text">Settings</span>
+        </span>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="mainContent" class="ml-[280px] transition-all duration-300">
+    <!-- Header -->
+    <header id="header" class="bg-crypto-darker border-b border-crypto-gray px-8 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-6">
+          <h1 class="text-2xl font-bold">Portfolio</h1>
+          {% if has_holdings %}
+          <div class="flex items-center space-x-4 text-sm text-crypto-muted">
+            <span><i class="fa-solid fa-briefcase text-crypto-teal mr-2"></i>{{ portfolio_data|length }} holdings</span>
+            <span><i class="fa-solid fa-trending-up text-crypto-orange mr-2"></i>{% if overall_performance >= 0 %}+{% endif %}{{ overall_performance|floatformat:2 }}% overall</span>
+          </div>
+          {% endif %}
+        </div>
+        <div class="flex items-center space-x-4">
+          {% if user.is_authenticated %}
+          <button 
+            onclick="toggleAddTransactionModal()"
+            class="bg-crypto-teal hover:bg-crypto-teal/80 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+          >
+            <i class="fa-solid fa-plus"></i>
+            <span>Add Transaction</span>
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <!-- Content Area -->
+    <main class="p-8">
+      {% if is_anonymous %}
+        <!-- Anonymous User Message -->
+        <div class="max-w-2xl mx-auto text-center py-16">
+          <div class="bg-crypto-gray rounded-2xl p-8">
+            <div class="w-20 h-20 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-full flex items-center justify-center mx-auto mb-6">
+              <i class="fa-solid fa-briefcase text-white text-3xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold mb-4">Create Your Crypto Portfolio</h2>
+            <p class="text-crypto-muted mb-6">
+              Track your cryptocurrency investments, monitor performance, and analyze your holdings over time. 
+              Sign up for free to start building your personalized crypto portfolio.
+            </p>
+            <div class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-crypto-muted mb-6">
+                <div class="flex items-center space-x-2">
+                  <i class="fa-solid fa-chart-line text-crypto-teal"></i>
+                  <span>Performance Tracking</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <i class="fa-solid fa-pie-chart text-crypto-orange"></i>
+                  <span>Portfolio Analytics</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <i class="fa-solid fa-history text-crypto-teal"></i>
+                  <span>Transaction History</span>
+                </div>
+              </div>
+              <div class="flex space-x-4 justify-center">
+                <a 
+                  href="{% url 'users:register' %}" 
+                  class="bg-gradient-to-r from-crypto-teal to-crypto-orange hover:from-crypto-teal/80 hover:to-crypto-orange/80 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02]"
+                >
+                  <i class="fa-solid fa-user-plus mr-2"></i>
+                  Sign Up Free
+                </a>
+                <a 
+                  href="{% url 'users:login' %}" 
+                  class="bg-crypto-darker hover:bg-crypto-muted/20 text-crypto-text border border-crypto-muted/20 font-medium py-3 px-6 rounded-lg transition-colors"
+                >
+                  <i class="fa-solid fa-sign-in-alt mr-2"></i>
+                  Login
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% elif has_holdings %}
+        <!-- Portfolio Overview Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <!-- Total Value -->
+          <div class="bg-crypto-gray rounded-xl p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-crypto-muted text-sm">Total Value</p>
+                <p class="text-2xl font-bold">${{ total_value|floatformat:2 }}</p>
+              </div>
+              <div class="w-12 h-12 bg-crypto-teal/20 rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-wallet text-crypto-teal"></i>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Total Invested -->
+          <div class="bg-crypto-gray rounded-xl p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-crypto-muted text-sm">Total Invested</p>
+                <p class="text-2xl font-bold">${{ total_invested|floatformat:2 }}</p>
+              </div>
+              <div class="w-12 h-12 bg-crypto-orange/20 rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-dollar-sign text-crypto-orange"></i>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Total P&L -->
+          <div class="bg-crypto-gray rounded-xl p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-crypto-muted text-sm">Total P&L</p>
+                <p class="text-2xl font-bold {% if total_gain_loss >= 0 %}text-green-400{% else %}text-red-400{% endif %}">
+                  {% if total_gain_loss >= 0 %}+{% endif %} ${{ total_gain_loss|floatformat:2 }}
+                </p>
+              </div>
+              <div class="w-12 h-12 {% if total_gain_loss >= 0 %}bg-green-400/20{% else %}bg-red-400/20{% endif %} rounded-lg flex items-center justify-center">
+                <i class="fa-solid {% if total_gain_loss >= 0 %}fa-arrow-trend-up text-green-400{% else %}fa-arrow-trend-down text-red-400{% endif %}"></i>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Performance % -->
+          <div class="bg-crypto-gray rounded-xl p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-crypto-muted text-sm">Performance</p>
+                <p class="text-2xl font-bold {% if overall_performance >= 0 %}text-green-400{% else %}text-red-400{% endif %}">
+                  {% if overall_performance >= 0 %}+{% endif %}{{ overall_performance|floatformat:2 }}%
+                </p>
+              </div>
+              <div class="w-12 h-12 {% if overall_performance >= 0 %}bg-green-400/20{% else %}bg-red-400/20{% endif %} rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-percentage {% if overall_performance >= 0 %}text-green-400{% else %}text-red-400{% endif %}"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <!-- Portfolio Allocation Chart -->
+          <div class="bg-crypto-gray rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4">Portfolio Allocation</h2>
+            <div id="allocationChart" style="height: 300px;"></div>
+          </div>
+          
+          <!-- Performance Chart -->
+          <div class="bg-crypto-gray rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4">Holdings Performance</h2>
+            <div id="performanceChart" style="height: 300px;"></div>
+          </div>
+        </div>          <!-- Holdings Table -->
+          <div class="bg-crypto-gray rounded-xl overflow-hidden">
+            <div class="p-6 pb-0">
+              <h2 class="text-xl font-bold mb-4">Current Holdings</h2>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead class="bg-crypto-darker/50">
+                  <tr>
+                    <th class="text-left py-4 px-6 text-crypto-muted font-medium">Asset</th>
+                    <th class="text-left py-4 px-6 text-crypto-muted font-medium">Holdings</th>
+                    <th class="text-left py-4 px-6 text-crypto-muted font-medium">Avg. Buy Price</th>
+                    <th class="text-left py-4 px-6 text-crypto-muted font-medium">Current Price</th>
+                    <th class="text-left py-4 px-6 text-crypto-muted font-medium">Value</th>
+                    <th class="text-left py-4 px-6 text-crypto-muted font-medium">P&L</th>
+                    <th class="text-left py-4 px-6 text-crypto-muted font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for item in portfolio_data %}
+                  <tr class="border-b border-crypto-darker/50 hover:bg-crypto-darker/30 transition-colors">
+                    <td class="py-4 px-6">
+                      <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-full flex items-center justify-center">
+                          <span class="text-white text-xs font-bold">{{ item.entry.coin.symbol|slice:":2" }}</span>
+                        </div>
+                        <div>
+                          <div class="font-medium">{{ item.entry.coin.name }}</div>
+                          <div class="text-sm text-crypto-muted">{{ item.entry.coin.symbol }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="py-4 px-6">
+                      <div class="font-medium">{{ item.entry.total_amount }}</div>
+                      <div class="text-sm text-crypto-muted">${{ item.entry.total_invested|floatformat:2 }} invested</div>
+                    </td>
+                    <td class="py-4 px-6 font-medium">${{ item.entry.average_buy_price|floatformat:2 }}</td>
+                    <td class="py-4 px-6 font-medium">${{ item.entry.coin.current_price|floatformat:2 }}</td>
+                    <td class="py-4 px-6 font-bold">${{ item.current_value|floatformat:2 }}</td>
+                    <td class="py-4 px-6">
+                      <div class="font-medium {% if item.gain_loss >= 0 %}text-crypto-green{% else %}text-crypto-red{% endif %}">
+                        {% if item.gain_loss >= 0 %}+{% endif %} ${{ item.gain_loss|floatformat:2 }}
+                      </div>
+                      <div class="text-sm {% if item.gain_loss_percentage >= 0 %}text-crypto-green{% else %}text-crypto-red{% endif %}">
+                        {% if item.gain_loss_percentage >= 0 %}+{% endif %}{{ item.gain_loss_percentage|floatformat:2 }}%
+                      </div>
+                    </td>
+                    <td class="py-4 px-6">
+                      <div class="flex space-x-2">
+                        <button 
+                          onclick="quickBuy('{{ item.entry.coin.symbol }}')"
+                          class="px-3 py-1 bg-crypto-green hover:bg-crypto-green/80 text-white text-sm rounded transition-colors"
+                        >
+                          Buy
+                        </button>
+                        <button 
+                          onclick="quickSell('{{ item.entry.coin.symbol }}', '{{ item.entry.coin.name }}', {{ item.entry.total_amount }}, {{ item.entry.coin.current_price }})"
+                          class="px-3 py-1 bg-crypto-red hover:bg-crypto-red/80 text-white text-sm rounded transition-colors"
+                        >
+                          Sell
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Recent Transactions -->
+          {% if recent_transactions %}
+          <div class="bg-crypto-gray rounded-xl overflow-hidden">
+            <div class="p-6 pb-0">
+              <h2 class="text-xl font-bold mb-4">Recent Transactions</h2>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead class="bg-crypto-darker/50">
+                  <tr>
+                    <th class="text-left py-4 px-6 text-crypto-muted font-medium">Date</th>
+                    <th class="text-left py-4 px-6 text-crypto-muted font-medium">Type</th>
+                    <th class="text-left py-4 px-6 text-crypto-muted font-medium">Asset</th>
+                    <th class="text-left py-4 px-6 text-crypto-muted font-medium">Amount</th>
+                    <th class="text-left py-4 px-6 text-crypto-muted font-medium">Price</th>
+                    <th class="text-left py-4 px-6 text-crypto-muted font-medium">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for transaction in recent_transactions %}
+                  <tr class="border-b border-crypto-darker/50 hover:bg-crypto-darker/30 transition-colors">
+                    <td class="py-4 px-6 text-crypto-muted text-sm">{{ transaction.transaction_date|date:"M d, Y H:i" }}</td>
+                    <td class="py-4 px-6">
+                      <span class="px-2 py-1 text-xs rounded {% if transaction.transaction_type == 'buy' %}bg-crypto-green/20 text-crypto-green{% else %}bg-crypto-red/20 text-crypto-red{% endif %}">
+                        {{ transaction.transaction_type|upper }}
+                      </span>
+                    </td>
+                    <td class="py-4 px-6">
+                      <div class="flex items-center space-x-2">
+                        <div class="w-6 h-6 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-full flex items-center justify-center">
+                          <span class="text-white text-xs font-bold">{{ transaction.coin.symbol|slice:":2" }}</span>
+                        </div>
+                        <span>{{ transaction.coin.symbol }}</span>
+                      </div>
+                    </td>
+                    <td class="py-4 px-6 font-medium">{{ transaction.amount }}</td>
+                    <td class="py-4 px-6">${{ transaction.price_per_coin|floatformat:2 }}</td>
+                    <td class="py-4 px-6 font-medium">${{ transaction.total_value|floatformat:2 }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {% endif %}
+
+        {% else %}
+          <!-- Empty Portfolio State -->
+          <div class="flex items-center justify-center h-96">
+            <div class="text-center">
+              <div class="w-24 h-24 bg-crypto-gray rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fa-solid fa-briefcase text-crypto-muted text-3xl"></i>
+              </div>
+              <h2 class="text-2xl font-bold mb-4">No Holdings Yet</h2>
+              <p class="text-crypto-muted mb-6 max-w-md">Start building your crypto portfolio by adding your first transaction or importing existing holdings.</p>
+              <button 
+                onclick="toggleAddTransactionModal()"
+                class="px-6 py-3 bg-crypto-teal hover:bg-crypto-teal/80 text-white rounded-lg transition-colors flex items-center space-x-2 mx-auto"
+              >
+                <i class="fa-solid fa-plus"></i>
+                <span>Add Your First Transaction</span>
+              </button>
+            </div>
+          </div>
+        {% endif %}
+      </main>
+    </div>
+  </div>
+
+  {% if user.is_authenticated %}
+  <!-- Add Transaction Modal -->
+  <div id="addTransactionModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-crypto-dark rounded-2xl p-8 w-full max-w-md border border-crypto-gray/30">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold">Add Transaction</h2>
+        <button onclick="toggleAddTransactionModal()" class="text-crypto-muted hover:text-crypto-text">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      </div>
+      
+      <form id="transactionForm" class="space-y-4">
+        <!-- Coin Search -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Cryptocurrency</label>
+          <div class="relative">
+            <input 
+              type="text" 
+              id="coinSearch" 
+              placeholder="Search for a coin (e.g., Bitcoin, BTC)"
+              class="w-full bg-crypto-gray border border-crypto-muted/20 rounded-lg px-4 py-2 focus:outline-none focus:border-crypto-teal"
+              autocomplete="off"
+            />
+            <div id="coinSearchResults" class="absolute top-full left-0 right-0 bg-crypto-gray border border-crypto-muted/20 rounded-lg mt-1 hidden max-h-48 overflow-y-auto z-10"></div>
+          </div>
+          <input type="hidden" id="selectedCoinSymbol" />
+        </div>
+        
+        <!-- Transaction Type -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Transaction Type</label>
+          <select id="transactionType" class="w-full bg-crypto-gray border border-crypto-muted/20 rounded-lg px-4 py-2 focus:outline-none focus:border-crypto-teal">
+            <option value="buy">Buy</option>
+            <option value="sell">Sell</option>
+          </select>
+        </div>
+        
+        <!-- Amount -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Amount</label>
+          <input 
+            type="number" 
+            id="amount" 
+            step="any"
+            placeholder="0.00"
+            class="w-full bg-crypto-gray border border-crypto-muted/20 rounded-lg px-4 py-2 focus:outline-none focus:border-crypto-teal"
+            required
+          />
+        </div>
+        
+        <!-- Price Per Coin -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Price Per Coin ($)</label>
+          <input 
+            type="number" 
+            id="pricePerCoin" 
+            step="any"
+            placeholder="0.00"
+            class="w-full bg-crypto-gray border border-crypto-muted/20 rounded-lg px-4 py-2 focus:outline-none focus:border-crypto-teal"
+            required
+          />
+          <button 
+            type="button" 
+            onclick="useCurrentPrice()" 
+            class="text-crypto-teal hover:text-crypto-teal/80 text-sm mt-1"
+          >
+            Use Current Market Price
+          </button>
+        </div>
+        
+        <!-- Notes -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Notes (Optional)</label>
+          <textarea 
+            id="notes" 
+            placeholder="Add any notes about this transaction"
+            class="w-full bg-crypto-gray border border-crypto-muted/20 rounded-lg px-4 py-2 focus:outline-none focus:border-crypto-teal h-20 resize-none"
+          ></textarea>
+        </div>
+        
+        <!-- Total Value -->
+        <div class="bg-crypto-gray/50 rounded-lg p-4">
+          <div class="flex justify-between items-center">
+            <span class="text-crypto-muted">Total Value:</span>
+            <span id="totalValue" class="font-bold text-lg">$0.00</span>
+          </div>
+        </div>
+        
+        <!-- Submit Button -->
+        <button 
+          type="submit" 
+          class="w-full bg-crypto-teal hover:bg-crypto-teal/80 text-white py-3 rounded-lg transition-colors font-medium"
+        >
+          Add Transaction
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if user.is_authenticated %}
+  <!-- Sell Modal -->
+  <div id="sellModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-crypto-darker rounded-2xl p-8 w-full max-w-md border border-crypto-gray/30">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold">Sell Cryptocurrency</h2>
+        <button onclick="toggleSellModal()" class="text-crypto-muted hover:text-crypto-text">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="mb-6">
+        <!-- Coin Info -->
+        <div class="bg-crypto-gray rounded-lg p-4 mb-4">
+          <div class="flex items-center space-x-3">
+            <div id="sellCoinIcon" class="w-10 h-10 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-full flex items-center justify-center">
+              <span id="sellCoinSymbolIcon" class="text-white text-xs font-bold">BTC</span>
+            </div>
+            <div>
+              <div id="sellCoinName" class="font-medium">Bitcoin</div>
+              <div id="sellCoinSymbol" class="text-sm text-crypto-muted">BTC</div>
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-crypto-muted/20">
+            <div class="flex justify-between text-sm">
+              <span class="text-crypto-muted">Available:</span>
+              <span id="availableAmount" class="font-medium">0.00</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-crypto-muted">Current Price:</span>
+              <span id="currentPrice" class="font-medium">$0.00</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Sell Amount -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2">Amount to Sell</label>
+          <input 
+            type="number" 
+            id="sellAmount" 
+            step="any"
+            placeholder="0.00"
+            class="w-full bg-crypto-gray border border-crypto-muted/20 rounded-lg px-4 py-2 focus:outline-none focus:border-crypto-teal"
+            required
+          />
+          <div class="flex justify-between mt-2">
+            <button 
+              type="button" 
+              onclick="setSellAmount('25')" 
+              class="text-crypto-teal hover:text-crypto-teal/80 text-sm"
+            >
+              25%
+            </button>
+            <button 
+              type="button" 
+              onclick="setSellAmount('50')" 
+              class="text-crypto-teal hover:text-crypto-teal/80 text-sm"
+            >
+              50%
+            </button>
+            <button 
+              type="button" 
+              onclick="setSellAmount('75')" 
+              class="text-crypto-teal hover:text-crypto-teal/80 text-sm"
+            >
+              75%
+            </button>
+            <button 
+              type="button" 
+              onclick="setSellAmount('100')" 
+              class="text-crypto-teal hover:text-crypto-teal/80 text-sm"
+            >
+              Max
+            </button>
+          </div>
+        </div>
+        
+        <!-- Total Value -->
+        <div class="bg-crypto-gray/50 rounded-lg p-4 mb-4">
+          <div class="flex justify-between items-center">
+            <span class="text-crypto-muted">Total Value:</span>
+            <span id="sellTotalValue" class="font-bold text-lg">$0.00</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Action Buttons -->
+      <div class="flex space-x-3">
+        <button 
+          onclick="toggleSellModal()" 
+          class="flex-1 bg-crypto-gray hover:bg-crypto-muted/20 text-crypto-text py-3 rounded-lg transition-colors font-medium"
+        >
+          Cancel
+        </button>
+        <button 
+          onclick="confirmSell()" 
+          class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg transition-colors font-medium"
+        >
+          Sell
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Notification Container -->
+  <div id="notificationContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+  <script>
+    // Sidebar toggle functionality
+    document.getElementById('sidebarToggle').addEventListener('click', function() {
+      const sidebar = document.getElementById('sidebar');
+      const mainContent = document.getElementById('mainContent');
+      
+      if (sidebar.classList.contains('sidebar-expanded')) {
+        sidebar.classList.remove('sidebar-expanded');
+        sidebar.classList.add('sidebar-collapsed');
+        mainContent.classList.remove('ml-[280px]');
+        mainContent.classList.add('ml-[80px]');
+      } else {
+        sidebar.classList.remove('sidebar-collapsed');
+        sidebar.classList.add('sidebar-expanded');
+        mainContent.classList.remove('ml-[80px]');
+        mainContent.classList.add('ml-[280px]');
+      }
+    });
+
+    // Modal Functions
+    function toggleAddTransactionModal() {
+      const modal = document.getElementById('addTransactionModal');
+      modal.classList.toggle('hidden');
+      if (!modal.classList.contains('hidden')) {
+        document.getElementById('coinSearch').focus();
+      } else {
+        // Reset form
+        document.getElementById('transactionForm').reset();
+        document.getElementById('selectedCoinSymbol').value = '';
+        document.getElementById('totalValue').textContent = '$0.00';
+        document.getElementById('coinSearchResults').classList.add('hidden');
+      }
+    }
+
+    // CSRF Token
+    function getCsrfToken() {
+      return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+             document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    }
+
+    // Notification System
+    function showNotification(message, type = 'success') {
+      const container = document.getElementById('notificationContainer');
+      const notification = document.createElement('div');
+      notification.className = `notification bg-crypto-${type === 'success' ? 'green' : 'red'} text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3`;
+      notification.innerHTML = `
+        <i class="fa-solid fa-${type === 'success' ? 'check' : 'exclamation-triangle'}"></i>
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()" class="ml-4 hover:text-gray-200">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      `;
+      
+      container.appendChild(notification);
+      
+      // Trigger animation
+      setTimeout(() => notification.classList.add('show'), 100);
+      
+      // Auto remove
+      setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+      }, 5000);
+    }
+
+    // Coin Search Functionality
+    let searchTimeout;
+    const coinSearch = document.getElementById('coinSearch');
+    const searchResults = document.getElementById('coinSearchResults');
+
+    coinSearch.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      const query = this.value.trim();
+      
+      if (query.length < 2) {
+        searchResults.classList.add('hidden');
+        return;
+      }
+      
+      searchTimeout = setTimeout(() => {
+        searchCoins(query);
+      }, 300);
+    });
+
+    async function searchCoins(query) {
+      try {
+        const response = await fetch(`/coins/search/?q=${encodeURIComponent(query)}&limit=10`);
+        const data = await response.json();
+        displaySearchResults(data.coins);
+      } catch (error) {
+        console.error('Search error:', error);
+      }
+    }
+
+    function displaySearchResults(coins) {
+      if (!coins || coins.length === 0) {
+        searchResults.classList.add('hidden');
+        return;
+      }
+
+      searchResults.innerHTML = coins.map(coin => `
+        <div class="flex items-center space-x-3 p-3 hover:bg-crypto-darker cursor-pointer" onclick="selectCoin('${coin.symbol}', '${coin.name}', ${coin.current_price})">
+          <div class="w-8 h-8 bg-gradient-to-r from-crypto-teal to-crypto-orange rounded-full flex items-center justify-center">
+            <span class="text-white text-xs font-bold">${coin.symbol.slice(0, 2)}</span>
+          </div>
+          <div class="flex-1">
+            <div class="font-medium">${coin.name}</div>
+            <div class="text-sm text-crypto-muted">${coin.symbol} • $${coin.current_price.toFixed(2)}</div>
+          </div>
+        </div>
+      `).join('');
+      
+      searchResults.classList.remove('hidden');
+    }
+
+    function selectCoin(symbol, name, price) {
+      document.getElementById('coinSearch').value = `${name} (${symbol})`;
+      document.getElementById('selectedCoinSymbol').value = symbol;
+      document.getElementById('pricePerCoin').value = price.toFixed(8);
+      searchResults.classList.add('hidden');
+      calculateTotal();
+    }
+
+    function useCurrentPrice() {
+      const symbol = document.getElementById('selectedCoinSymbol').value;
+      if (!symbol) {
+        showNotification('Please select a cryptocurrency first', 'error');
+        return;
+      }
+      
+      // Get current price from the selected coin
+      fetch(`/coin-data/${symbol}/`)
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('pricePerCoin').value = data.current_price.toFixed(8);
+          calculateTotal();
+        })
+        .catch(error => {
+          console.error('Error fetching current price:', error);
+          showNotification('Error fetching current price', 'error');
+        });
+    }
+
+    // Calculate total value
+    function calculateTotal() {
+      const amount = parseFloat(document.getElementById('amount').value) || 0;
+      const price = parseFloat(document.getElementById('pricePerCoin').value) || 0;
+      const total = amount * price;
+      document.getElementById('totalValue').textContent = `$${total.toFixed(2)}`;
+    }
+
+    // Event listeners for total calculation
+    document.getElementById('amount').addEventListener('input', calculateTotal);
+    document.getElementById('pricePerCoin').addEventListener('input', calculateTotal);
+
+    // Form submission
+    document.getElementById('transactionForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const symbol = document.getElementById('selectedCoinSymbol').value;
+      const transactionType = document.getElementById('transactionType').value;
+      const amount = document.getElementById('amount').value;
+      const pricePerCoin = document.getElementById('pricePerCoin').value;
+      const notes = document.getElementById('notes').value;
+      
+      if (!symbol) {
+        showNotification('Please select a cryptocurrency', 'error');
+        return;
+      }
+      
+      if (!amount || !pricePerCoin) {
+        showNotification('Please fill in all required fields', 'error');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/portfolio/transaction/add/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({
+            symbol: symbol,
+            transaction_type: transactionType,
+            amount: amount,
+            price_per_coin: pricePerCoin,
+            notes: notes
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showNotification(data.message, 'success');
+          toggleAddTransactionModal();
+          // Reload page to show updated portfolio
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showNotification(data.message, 'error');
+        }
+        
+      } catch (error) {
+        console.error('Error adding transaction:', error);
+        showNotification('Error adding transaction', 'error');
+      }
+    });
+
+    // Quick Buy/Sell Functions
+    async function quickBuy(symbol) {
+      const amount = prompt(`How many ${symbol} would you like to buy?`);
+      if (!amount || isNaN(amount) || parseFloat(amount) <= 0) return;
+      
+      try {
+        const response = await fetch('/portfolio/quick-add/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({
+            symbol: symbol,
+            amount: amount
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showNotification(data.message, 'success');
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showNotification(data.message, 'error');
+        }
+        
+      } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error adding to portfolio', 'error');
+      }
+    }
+
+    // Sell Modal Functions
+    let currentSellData = null;
+    
+    async function quickSell(symbol, coinName, availableAmount, currentPrice) {
+      currentSellData = { symbol, coinName, availableAmount, currentPrice };
+      
+      // Populate modal
+      document.getElementById('sellCoinSymbolIcon').textContent = symbol.slice(0, 2);
+      document.getElementById('sellCoinName').textContent = coinName;
+      document.getElementById('sellCoinSymbol').textContent = symbol;
+      document.getElementById('availableAmount').textContent = availableAmount.toFixed(8) + ' ' + symbol;
+      document.getElementById('currentPrice').textContent = '$' + currentPrice.toLocaleString();
+      
+      // Clear previous values
+      document.getElementById('sellAmount').value = '';
+      document.getElementById('sellTotalValue').textContent = '$0.00';
+      
+      toggleSellModal();
+    }
+    
+    function toggleSellModal() {
+      const modal = document.getElementById('sellModal');
+      modal.classList.toggle('hidden');
+    }
+    
+    function setSellAmount(percentage) {
+      if (!currentSellData) return;
+      
+      const percentValue = parseFloat(percentage) / 100;
+      const amount = currentSellData.availableAmount * percentValue;
+      document.getElementById('sellAmount').value = amount.toFixed(8);
+      updateSellTotal();
+    }
+    
+    function updateSellTotal() {
+      const amount = parseFloat(document.getElementById('sellAmount').value) || 0;
+      const price = currentSellData ? currentSellData.currentPrice : 0;
+      const total = amount * price;
+      document.getElementById('sellTotalValue').textContent = '$' + total.toLocaleString();
+    }
+    
+    async function confirmSell() {
+      if (!currentSellData) return;
+      
+      const amount = parseFloat(document.getElementById('sellAmount').value);
+      
+      if (isNaN(amount) || amount <= 0 || amount > currentSellData.availableAmount) {
+        showNotification('Please enter a valid amount', 'error');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/portfolio/transaction/add/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({
+            symbol: currentSellData.symbol,
+            transaction_type: 'sell',
+            amount: amount,
+            price_per_coin: currentSellData.currentPrice,
+            notes: 'Quick sell at market price'
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showNotification(`Successfully sold ${amount} ${currentSellData.symbol}`, 'success');
+          toggleSellModal();
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showNotification(data.message, 'error');
+        }
+        
+      } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error selling from portfolio', 'error');
+      }
+    }
+    
+    // Add event listener for sell amount input
+    document.addEventListener('DOMContentLoaded', function() {
+      const sellAmountInput = document.getElementById('sellAmount');
+      if (sellAmountInput) {
+        sellAmountInput.addEventListener('input', updateSellTotal);
+      }
+    });
+
+    // Load Portfolio Analytics
+    async function loadPortfolioAnalytics() {
+      try {
+        const response = await fetch('/portfolio/analytics/');
+        const data = await response.json();
+        
+        if (data.success) {
+          createAllocationChart(data.allocation_data);
+          createPerformanceChart(data.performance_data);
+        }
+      } catch (error) {
+        console.error('Error loading analytics:', error);
+      }
+    }
+
+    // Create Allocation Pie Chart
+    function createAllocationChart(data) {
+      Highcharts.chart('allocationChart', {
+        chart: {
+          type: 'pie',
+          backgroundColor: 'transparent'
+        },
+        title: {
+          text: null
+        },
+        credits: {
+          enabled: false
+        },
+        plotOptions: {
+          pie: {
+            allowPointSelect: true,
+            cursor: 'pointer',
+            dataLabels: {
+              enabled: true,
+              format: '<b>{point.name}</b>: {point.percentage:.1f} %',
+              style: {
+                color: '#F1F5F9'
+              }
+            },
+            showInLegend: true
+          }
+        },
+        legend: {
+          itemStyle: {
+            color: '#F1F5F9'
+          }
+        },
+        series: [{
+          name: 'Holdings',
+          colorByPoint: true,
+          data: data.map(item => ({
+            name: item.symbol,
+            y: item.value,
+            sliced: false,
+            selected: false
+          }))
+        }]
+      });
+    }
+
+    // Create Performance Bar Chart
+    function createPerformanceChart(data) {
+      const categories = data.map(item => item.symbol);
+      const gains = data.map(item => item.gain_loss_percentage);
+      
+      Highcharts.chart('performanceChart', {
+        chart: {
+          type: 'column',
+          backgroundColor: 'transparent'
+        },
+        title: {
+          text: null
+        },
+        credits: {
+          enabled: false
+        },
+        xAxis: {
+          categories: categories,
+          labels: {
+            style: {
+              color: '#F1F5F9'
+            }
+          }
+        },
+        yAxis: {
+          title: {
+            text: 'Gain/Loss (%)',
+            style: {
+              color: '#F1F5F9'
+            }
+          },
+          labels: {
+            style: {
+              color: '#F1F5F9'
+            }
+          },
+          plotLines: [{
+            value: 0,
+            color: '#64748B',
+            width: 1
+          }]
+        },
+        plotOptions: {
+          column: {
+            colorByPoint: false,
+            color: '#14B8A6'
+          }
+        },
+        legend: {
+          enabled: false
+        },
+        series: [{
+          name: 'Performance',
+          data: gains.map(gain => ({
+            y: gain,
+            color: gain >= 0 ? '#10B981' : '#EF4444'
+          }))
+        }]
+      });
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      {% if has_holdings %}
+        loadPortfolioAnalytics();
+      {% endif %}
+    });
+
+    // Hide search results when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('#coinSearch') && !e.target.closest('#coinSearchResults')) {
+        searchResults.classList.add('hidden');
+      }
+    });
+
+    // Close modal when clicking outside
+    document.getElementById('addTransactionModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        toggleAddTransactionModal();
+      }
+    });
+  </script>
+</body>
+</html>
