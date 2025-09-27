@@ -14,13 +14,18 @@ from .crypto_data_service import crypto_data_service
 def dashboard(request):
     user_watchlist = Watchlist.objects.filter(user=request.user).select_related('coin')
     
-    top_coins = Coin.objects.all().order_by('-market_cap')[:10]
-    
-    # Default to first coin in watchlist if available, otherwise first coin in database
-    if user_watchlist.exists():
-        default_coin = user_watchlist.first().coin
-    else:
-        default_coin = Coin.objects.first()  # Get first coin instead of specifically BTC
+    try:
+        top_coins = Coin.objects.all().order_by('-market_cap')[:10]
+        
+        # Default to first coin in watchlist if available, otherwise first coin in database
+        if user_watchlist.exists():
+            default_coin = user_watchlist.first().coin
+        else:
+            default_coin = Coin.objects.first()  # Get first coin instead of specifically BTC
+    except Exception as e:
+        # Database tables don't exist yet or are empty
+        top_coins = []
+        default_coin = None
 
     context = {
         "top_coins": top_coins,
@@ -116,17 +121,23 @@ def dashboard(request):
         MockWatchlistItem = namedtuple('MockWatchlistItem', ['coin'])
         user_watchlist = [MockWatchlistItem(coin=coin) for coin in coins]
     
-    top_coins = Coin.objects.all().order_by('-market_cap')[:10]
-    
-    # Default to first coin in watchlist if available, otherwise first coin in database
-    if user_watchlist:
-        if request.user.is_authenticated:
-            default_coin = user_watchlist[0].coin
+    try:
+        top_coins = Coin.objects.all().order_by('-market_cap')[:10]
+        
+        # Default to first coin in watchlist if available, otherwise first coin in database
+        if user_watchlist:
+            if request.user.is_authenticated:
+                default_coin = user_watchlist[0].coin
+            else:
+                # For anonymous users, user_watchlist is a list of MockWatchlistItem objects
+                default_coin = user_watchlist[0].coin
         else:
-            # For anonymous users, user_watchlist is a list of MockWatchlistItem objects
-            default_coin = user_watchlist[0].coin
-    else:
-        default_coin = Coin.objects.first()  # Get first coin instead of specifically BTC
+            default_coin = Coin.objects.first()  # Get first coin instead of specifically BTC
+    except Exception as e:
+        # Database tables don't exist yet or are empty
+        top_coins = []
+        default_coin = None
+        user_watchlist = []
 
     context = {
         "top_coins": top_coins,
