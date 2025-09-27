@@ -181,6 +181,21 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
 
 # Logging Configuration
+import logging
+import os
+
+# Create logs directory if it doesn't exist (for local development)
+log_dir = BASE_DIR / 'logs'
+if not log_dir.exists():
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+    except (OSError, PermissionError):
+        # If we can't create logs directory (e.g., in production), use console only
+        pass
+
+# Determine if we can write to file (for local dev) or console only (for production)
+USE_FILE_LOGGING = log_dir.exists() and os.access(log_dir, os.W_OK)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -195,12 +210,6 @@ LOGGING = {
         },
     },
     'handlers': {
-        'file': {
-            'level': 'WARNING',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'django.log',
-            'formatter': 'verbose',
-        },
         'console': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
@@ -213,14 +222,26 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
         'market': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
     },
 }
+
+# Add file handler only if we can write to logs directory (local development)
+if USE_FILE_LOGGING:
+    LOGGING['handlers']['file'] = {
+        'level': 'WARNING',
+        'class': 'logging.FileHandler',
+        'filename': BASE_DIR / 'logs' / 'django.log',
+        'formatter': 'verbose',
+    }
+    # Add file handler to loggers
+    LOGGING['loggers']['django']['handlers'].append('file')
+    LOGGING['loggers']['market']['handlers'].append('file')
