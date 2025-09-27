@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: cryptodashboard
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py migrate && python manage.py collectstatic --noinput && gunicorn dashboard.wsgi:application
+    envVars:
+      - key: DEBUG
+        value: False
+      - key: SECRET_KEY
+        generateValue: true
+      - key: NEWS_API_KEY
+        value: ca1a1a52ccf34249b58683097d803fda
+      - key: ALLOWED_HOSTS
+        value: "*"
+      - key: PYTHON_VERSION
+        value: "3.13"

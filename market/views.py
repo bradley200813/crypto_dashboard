@@ -10,63 +10,9 @@ from decimal import Decimal
 import json
 from .crypto_data_service import crypto_data_service
 
-@login_required
-def dashboard(request):
-    user_watchlist = Watchlist.objects.filter(user=request.user).select_related('coin')
-    
-    try:
-        top_coins = Coin.objects.all().order_by('-market_cap')[:10]
-        
-        # Default to first coin in watchlist if available, otherwise first coin in database
-        if user_watchlist.exists():
-            default_coin = user_watchlist.first().coin
-        else:
-            default_coin = Coin.objects.first()  # Get first coin instead of specifically BTC
-    except Exception as e:
-        # Database tables don't exist yet or are empty
-        top_coins = []
-        default_coin = None
-
-    context = {
-        "top_coins": top_coins,
-        "watchlist": user_watchlist,
-        "selected_coin": default_coin,
-    }
-    return render(request, "market/index.html", context)
 
 
-#@login_required
-def coin_data(request, symbol):
-    try:
-        coin = Coin.objects.get(symbol=symbol.upper())
-        
-        # Generate realistic price history if empty
-        price_history = coin.price_history
-        if not price_history or len(price_history) == 0:
-            base_price = float(coin.current_price)
-            # Generate 7 days of realistic price variations around current price
-            import random
-            price_history = [
-                round(base_price * (0.92 + random.random() * 0.16), 2)  # Random between 92% and 108% of current price
-                for _ in range(7)
-            ]
-            # Ensure the last value is close to current price
-            price_history[-1] = base_price
-        
-        data = {
-            "name": coin.name,
-            "symbol": coin.symbol,
-            "current_price": float(coin.current_price),
-            "market_cap": int(coin.market_cap),
-            "volume_24h": int(coin.volume_24h),
-            "price_change_24h": float(coin.price_change_24h),
-            "btc_dominance": float(coin.btc_dominance),
-            "fear_greed": int(coin.fear_greed),
-            "price_history": price_history
-        }
-        return JsonResponse(data)
-    except Coin.DoesNotExist:
-        return JsonResponse({"error": "Coin not found"}, status=404)
+
 
 
 def add_to_watchlist(request):
@@ -186,6 +132,8 @@ def add_to_watchlist(request):
         try:
             data = json.loads(request.body)
             symbol = data.get('symbol', '').upper()
+            
+            coin = Coin.objects.get(symbol=symbol)
             
             # Check if already in watchlist
             if Watchlist.objects.filter(user=request.user, coin=coin).exists():
