@@ -63,6 +63,21 @@ media/
 logs/
 *.log
 
+# Crypto Dashboard Specific
+# API keys and secrets (extra safety)
+*api_key*
+*secret*
+.secrets/
+
+# Database backups
+*.db
+*.sqlite
+*.sqlite3
+db_backup/
+
+# Development documentation (temporary files)
+PORTFOLIO_DOCUMENTATION.md
+
 # Cache
 .cache/
 .pytest_cache/
@@ -80,3 +95,13 @@ coverage.xml
 # Local development
 local/
 .local/
+
+# Backup files
+*.bak
+*.backup
+*.tmp
+
+# Security - Additional protection
+config.ini
+settings_local.py
+local_settings.py
